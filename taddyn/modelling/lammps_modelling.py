@@ -27,6 +27,12 @@ from taddyn.modelling import LAMMPS_CONFIG as CONFIG
 from taddyn.modelling.lammpsmodel import LAMMPSmodel
 from taddyn.modelling.restraints import HiCBasedRestraints
 
+class InitalConformationError(Exception):
+    """
+    Exception to handle failed initial conformation.
+    """
+    pass
+
 def abortable_worker(func, *args, **kwargs):
     timeout = kwargs.get('timeout', None)
     failedSeedLog = kwargs.get('failedSeedLog', None)
@@ -2779,7 +2785,14 @@ def generate_random_walks(chromosome_particle_numbers,
         for particle in range(1,number_of_particles):
             #print "Positioning particle %d" % (particle+1)
             particle_overlap = 0 # 0 means that there is an overlap -> PROBLEM
+            overlapCounter = -1
+            maxIter = 1000
             while particle_overlap == 0:
+                overlapCounter += 1
+                if overlapCounter > maxIter:
+                    # raise error so log file is created to avoid k_seed
+                    errorName = 'ERROR: Initial conformation non ending loop'
+                    raise InitalConformationError(errorName)
                 particle_overlap = 1
                 new_particle = []
                 if pbc:
@@ -2837,7 +2850,6 @@ def generate_random_walks(chromosome_particle_numbers,
                 z_com += z
                 cnt += 1
             x_com, y_com, z_com = (x_com/cnt,y_com/cnt,z_com/cnt)
-            print("#Old COM ",x_com,y_com,z_com)
 
             for i in range(len(random_walk['x'])):
                 random_walk['x'][i] -= x_com
@@ -2852,7 +2864,6 @@ def generate_random_walks(chromosome_particle_numbers,
                 z_com += z
                 cnt += 1
             x_com, y_com, z_com = (x_com/cnt,y_com/cnt,z_com/cnt)
-            print("#New COM ",x_com,y_com,z_com)
             
     return random_walks
 

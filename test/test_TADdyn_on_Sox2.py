@@ -12,10 +12,6 @@ from numpy import median, zeros, mean, dot
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
-import mpl_toolkits.mplot3d as a3
-import scipy as sp
-from scipy.optimize import linprog
-
 from scipy.spatial import ConvexHull
 
 ### Convex-hull calculation ###
@@ -43,14 +39,14 @@ for timepoint in range(len(nrm_files)):
     nrm_data[timepoint].filter_columns()
 
 # 2 - Produce the TADbit models at stage 0 (B cells) using the
-# test_Sox2 = Chromosome(name="Test Sox2")
-# test_Sox2.add_experiment("Sox2", 5000, 
-#                          norm_data=nrm_data[0],
-#                          silent=True)
-# exp = test_Sox2.experiments[0]
-# optimizer = IMPoptimizer(exp, 1, 300, n_models=500, n_keep=100)
-# optimizer.run_grid_search(n_cpus=16, lowfreq_range=(-3.0, 0.0, 1.0), upfreq_range=(0.0, 3.0, 1.0), maxdist_range=(150,400,50), verbose=1)
-# optimizer.write_result('results.log')
+test_Sox2 = Chromosome(name="Test Sox2")
+test_Sox2.add_experiment("Sox2", 5000, 
+                         norm_data=nrm_data[0],
+                         silent=True)
+exp = test_Sox2.experiments[0]
+optimizer = IMPoptimizer(exp, 1, 300, n_models=500, n_keep=100)
+optimizer.run_grid_search(n_cpus=16, lowfreq_range=(-3.0, 0.0, 1.0), upfreq_range=(0.0, 3.0, 1.0), maxdist_range=(150,400,50), verbose=1)
+optimizer.write_result('results.log')
      
 # 3 - Produce the TADdyn trajectory
 # Optimal parameters:
@@ -64,8 +60,7 @@ chr_region = Chromosome_region("Chr3", hic=nrm_data,
                                zeros=[nrm_data_timepoint.bads for nrm_data_timepoint in nrm_data])
 for nparticles in [300]:
 #for nparticles in [25]:
-             
-    #models = exp.model_region(1, nparticles, n_models=500, n_keep=100,
+              
     ensemble_of_models = chr_region.model_region(1, nparticles, n_models=100, n_keep=100,
                               n_cpus=16, cleanup=False, hide_log=False,
                               initial_conformation='random',                          
@@ -74,13 +69,11 @@ for nparticles in [300]:
                                       'maxdist': 300  , 'upfreq'  : 1.0, 
                                       'lowfreq': -1.0},
                               tmp_folder='./TADdyn_on_Sox2_test_%sparticles/' % nparticles,
-                              timeout_job=90000, useColvars=True)
-             
+                              timeout_job=90000, useColvars=False)
+              
     with open("TADdyn_on_Sox2_test_%sparticles.pickle" % nparticles, 'wb') as pickle_file:
         dump(ensemble_of_models,pickle_file)
-               
-exit() 
-
+                
 # 4 - Analysis of the TADdyn models
 print( "Models analysis:" )
 print( "0 - Loading the models" )
