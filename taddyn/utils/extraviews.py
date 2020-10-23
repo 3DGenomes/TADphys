@@ -15,6 +15,9 @@ try:
 except ImportError:
     warn('matplotlib not found\n')
 
+def my_round(num, val=4):
+    num = round(float(num), val)
+    return str(int(num) if num == int(num) else num)
 
 
 def nicer(res, sep=' ', comma='', allowed_decimals=0):
@@ -52,8 +55,8 @@ def tadbit_savefig(savefig):
 def plot_2d_optimization_result(result,
                                 axes=('scale', 'kbending', 'maxdist', 'lowfreq',
                                       'upfreq'),
-                                dcutoff=None,
-                                show_best=0, skip=None, savefig=None,clim=None):
+                                dcutoff=None, show_best=0, skip=None, 
+                                savefig=None,clim=None, cmap='inferno'):
 
     """
     A grid of heatmaps representing the result of the optimization. In the optimization
@@ -78,12 +81,12 @@ def plot_2d_optimization_result(result,
        If None, the image will be displayed using matplotlib GUI. NOTE: the extension
        of the file name will automatically determine the desired format.
     :param None clim: color scale. If None, the max and min values of the input are used.
+    :param inferno cmap: matplotlib colormap
 
     """
 
     from mpl_toolkits.axes_grid1 import AxesGrid
     import matplotlib.patches as patches
-    from matplotlib.cm import jet
 
     ori_axes, axes_range, result = result
 
@@ -116,20 +119,19 @@ def plot_2d_optimization_result(result,
         tmp_result     = np.empty((len_scale_range  , len_kbending_range, len_maxdist_range,
                                    len_lowfreq_range, len_upfreq_range))
 
-        indeces_sets = product(range(len(axes_range[0])),
-                                         range(len(axes_range[1])),
-                                         range(len(axes_range[2])),
-                                         range(len(axes_range[3])))
+        indeces_sets = product(list(range(len(axes_range[0]))),
+                                         list(range(len(axes_range[1]))),
+                                         list(range(len(axes_range[2]))),
+                                         list(range(len(axes_range[3]))))
 
         for indeces_set in indeces_sets:
-            tmp_indeces_set = (0,0,0,0,0)
+            tmp_indeces_set = [0, 0, 0, 0, 0]
             tmp_indeces_set[0] = indeces_set[scale_index]   # scale
             tmp_indeces_set[1] = 0                          # kbending
             tmp_indeces_set[2] = indeces_set[maxdist_index] # maxdist
             tmp_indeces_set[3] = indeces_set[lowfreq_index] # lowfreq
             tmp_indeces_set[4]=  indeces_set[upfreq_index]  # upfreq
             tmp_result[tmp_indeces_set] = result[indeces_set]
-
 
         ori_axes   = ('scale', 'kbending', 'maxdist', 'lowfreq', 'upfreq')
         axes_range = tmp_axes_range
@@ -141,7 +143,7 @@ def plot_2d_optimization_result(result,
     result = result.transpose(trans)
     # set NaNs
     result = np.ma.array(result, mask=np.isnan(result))
-    cmap = jet
+    cmap = plt.get_cmap(cmap)
     cmap.set_bad('w', 1.)
 
     # defines axes
@@ -151,22 +153,23 @@ def plot_2d_optimization_result(result,
     else:
         vmin = result.min()
         vmax = result.max()
-
+        
+    round_decs = 6
     # Here we round the values in axes_range and pass from the
     # 5 parameters to the cartesian axes names.
-    vax = [my_round(i, 3) for i in axes_range[0]] # scale
-    wax = [my_round(i, 3) for i in axes_range[1]] # kbending
-    zax = [my_round(i, 3) for i in axes_range[2]] # maxdist
-    yax = [my_round(i, 3) for i in axes_range[3]] # lowfreq
-    xax = [my_round(i, 3) for i in axes_range[4]] # upfreq
+    vax = [my_round(i, round_decs) for i in axes_range[0]] # scale
+    wax = [my_round(i, round_decs) for i in axes_range[1]] # kbending
+    zax = [my_round(i, round_decs) for i in axes_range[2]] # maxdist
+    yax = [my_round(i, round_decs) for i in axes_range[3]] # lowfreq
+    xax = [my_round(i, round_decs) for i in axes_range[4]] # upfreq
 
     # This part marks the set of best correlations that the
     # user wants to be highlighted in the plot
-    vax_range = range(len(vax))[::-1] # scale
-    wax_range = range(len(wax))[::-1] # kbending
-    zax_range = range(len(zax))       # maxdist
-    yax_range = range(len(yax))       # lowfreq
-    xax_range = range(len(xax))       # upfreq
+    vax_range = list(range(len(vax)))[::-1] # scale
+    wax_range = list(range(len(wax)))[::-1] # kbending
+    zax_range = list(range(len(zax)))       # maxdist
+    yax_range = list(range(len(yax)))       # lowfreq
+    xax_range = list(range(len(xax)))       # upfreq
     indeces_sets = product(vax_range, wax_range,
                                      zax_range, yax_range,
                                      xax_range)
@@ -219,8 +222,8 @@ def plot_2d_optimization_result(result,
                     cbar_location="right",
                     cbar_mode="single",
                     # cbar_size="%s%%" % (20./ width),
-                    cbar_pad="15%",
-                    )
+                    cbar_pad="30%",
+    )
     cell = ncols
     used = []
 
@@ -238,7 +241,7 @@ def plot_2d_optimization_result(result,
             grid[cell].tick_params(axis='both', direction='out', top=False,
                                    right=False, left=False, bottom=False)
 
-            for j, best  in enumerate(sort_result[:-1]):
+            for j, best  in enumerate(sort_result[:-1], 1):
                 if best[1] == vax[row[0]] and best[2] == wax[row[1]] and best[3] == zax[column]:
                     #print j, best, vax[row[0]], wax[row[1]], zax[column]
                     grid[cell].text(xax.index(best[5]), yax.index(best[4]), str(j),
@@ -257,25 +260,26 @@ def plot_2d_optimization_result(result,
                                     {'ha':'center', 'va':'center'}, size=8)
 
                 grid[cell].text(len(xax) / 2. - 0.5, len(yax)+0.25,
-                                str(my_round(zax[column], 3)),
+                                str(my_round(zax[column], round_decs)),
                                 {'ha':'center', 'va':'center'}, size=8)
 
             cell += 1
 
-        rect = patches.Rectangle((len(xax)-.5, -0.5), 1.5, len(yax),
+        rect = patches.Rectangle((len(xax)-.5, -0.5), 2.5, len(yax),
                                  facecolor='grey', alpha=0.5)
         # Define the rectangles for
         rect.set_clip_on(False)
         grid[cell-1].add_patch(rect)
-        grid[cell-1].text(len(xax)+.25, 0.0,
-                          str(my_round(vax[row[0]], 3)) + '\n' +
-                          str(my_round(wax[row[1]], 3)),
+        grid[cell-1].text(len(xax) + 1.0, len(yax) / 2.,
+                          str(my_round(vax[row[0]], round_decs)) + '\n' +
+                          str(my_round(wax[row[1]], round_decs)) + '\n' +
+                          str(my_round(dcutoff, round_decs)),
                           {'ha':'center', 'va':'center'},
                           rotation=90, size=8)
 
-    grid[cell-1].text(len(xax)+.25, len(yax)/2.-2.0,
-                      axes[0] + '\n' + axes[1],
-                      {'ha':'center', 'va':'center'},
+    grid[cell-1].text(len(xax) - 0.2, len(yax) + 1.2,
+                      axes[0] + '\n' + axes[1] + '\ndcutoff',
+                      {'ha':'left', 'va':'center'},
                       rotation=90, size=8)
 
     #
@@ -287,10 +291,10 @@ def plot_2d_optimization_result(result,
     # is set equal to True.
     # grid.axes_llc.set_ylim(-0.5, len(yax)+1)
 
-    grid.axes_llc.set_xticks(range(0, len(xax), 2))
-    grid.axes_llc.set_yticks(range(0, len(yax), 2))
-    grid.axes_llc.set_xticklabels([my_round(i, 3) for i in xax][::2], size=9)
-    grid.axes_llc.set_yticklabels([my_round(i, 3) for i in yax][::2], size=9)
+    grid.axes_llc.set_xticks(list(range(0, len(xax), 2)))
+    grid.axes_llc.set_yticks(list(range(0, len(yax), 2)))
+    grid.axes_llc.set_xticklabels([my_round(i, round_decs) for i in xax][::2], size=9)
+    grid.axes_llc.set_yticklabels([my_round(i, round_decs) for i in yax][::2], size=9)
     grid.axes_llc.set_xlabel(axes[4], size=9)
     grid.axes_llc.set_ylabel(axes[3], size=9)
 
@@ -299,15 +303,8 @@ def plot_2d_optimization_result(result,
     grid.cbar_axes[0].set_ylabel('Correlation value', size=9)
     grid.cbar_axes[0].tick_params(labelsize=9)
 
-    # Setting title of the genearal title of the grid of heatmaps
-    dcutoffs = [str(d) for d in dcutoff if dcutoff] if dcutoff else ['Default']
-    # TODO: FIXME
-    # title = 'Optimal IMP parameters\n'
-    # title += 'Best: %s=%%s, %s=%%s, %s=%%s\n%s=%%s, %s=%%s %s=%%s' % (
-    #     axes[0], axes[1], axes[2], axes[3], axes[4], 'dcutoff')
-    # heatmap.suptitle(title % tuple([my_round(i, 3) for i in sort_result[0][1:]] +
-    #                                dcutoffs),
-    #                  size=12)
+    title = 'Optimal IMP parameters\n'
+    heatmap.suptitle(title, size=12)
 
     #plt.tight_layout()
     if savefig:

@@ -627,7 +627,7 @@ def lammps_simulate(lammps_folder, run_time,
                             maxi = (kincrease, step, f)
                 # In case there is no restart file at all
                 if maxi[2] == '':
-                    print('Could not find a LAMMPS restart file')
+                    #print('Could not find a LAMMPS restart file')
                     # will check later if we have a path or a file
                     getIniConf = True
                     #restart_file = False

@@ -20,7 +20,7 @@ from collections import OrderedDict
 
 try:
     from taddyn.modelling.impoptimizer  import IMPoptimizer
-    from taddyn.modelling.imp_modelling import generate_3d_models
+    # from taddyn.modelling.imp_modelling import generate_3d_models
     from taddyn.modelling.lammps_modelling import generate_lammps_models
 except ImportError:
     stderr.write('IMP not found, check PYTHONPATH\n')
