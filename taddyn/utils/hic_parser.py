@@ -296,7 +296,7 @@ def read_matrix(things, parser=None, hic=True, resolution=1, size=None,
                  **kwargs):
     """
     Read and checks a matrix from a file (using
-    :func:`pytadbit.parser.hic_parser.autoreader`) or a list.
+    :func:`taddyn.utils.hic_parser.autoreader`) or a list.
 
     :param things: might be either a file name, a file handler or a list of
         list (all with same length)

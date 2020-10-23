@@ -18,7 +18,7 @@ class HiCBasedRestraints(object):
 
        ::
 
-         from pytadbit.modelling.CONFIG import CONFIG
+         from taddyn.modelling.CONFIG import CONFIG
 
          where CONFIG is a dictionary of dictionaries to be passed to this function:
 

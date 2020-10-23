@@ -164,7 +164,7 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a StructuralModels object
+    :returns: a TADdyn models dictionary
     """
 
     if not tmp_folder:
@@ -540,7 +540,7 @@ def lammps_simulate(lammps_folder, run_time,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a StructuralModels object
+    :returns: a TADdyn models dictionary
 
     """
     
@@ -1048,7 +1048,7 @@ def run_lammps(kseed, lammps_folder, run_time,
                     restart_file_new = restart_file + 'restart_kincrease_%s_time_*.restart' %(kincrease)
                 else:
                     restart_file_new = '/'.join(restart_file.split('/')[:-1]) + '/restart_kincrease_%s_time_*.restart' %(kincrease)
-                print(restart_file_new)
+                #print(restart_file_new)
                 lmp.command("restart %i %s" %(int(steering_pairs['timesteps_per_k']/store_n_steps), restart_file_new))
 
             #lmp.command("reset_timestep %i" % resettime)
@@ -2850,7 +2850,7 @@ def generate_random_walks(chromosome_particle_numbers,
                 z_com += z
                 cnt += 1
             x_com, y_com, z_com = (x_com/cnt,y_com/cnt,z_com/cnt)
-            print("#Old COM ",x_com,y_com,z_com)
+            #print("#Old COM ",x_com,y_com,z_com)
 
             for i in range(len(random_walk['x'])):
                 random_walk['x'][i] -= x_com
@@ -2865,7 +2865,7 @@ def generate_random_walks(chromosome_particle_numbers,
                 z_com += z
                 cnt += 1
             x_com, y_com, z_com = (x_com/cnt,y_com/cnt,z_com/cnt)
-            print("#New COM ",x_com,y_com,z_com)
+            #print("#New COM ",x_com,y_com,z_com)
             
     return random_walks
 
