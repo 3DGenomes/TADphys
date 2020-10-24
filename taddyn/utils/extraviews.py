@@ -268,6 +268,7 @@ def plot_2d_optimization_result(result,
         rect = patches.Rectangle((len(xax)-.5, -0.5), 2.5, len(yax),
                                  facecolor='grey', alpha=0.5)
         # Define the rectangles for
+        print dcutoff
         rect.set_clip_on(False)
         grid[cell-1].add_patch(rect)
         grid[cell-1].text(len(xax) + 1.0, len(yax) / 2.,
@@ -303,7 +304,7 @@ def plot_2d_optimization_result(result,
     grid.cbar_axes[0].set_ylabel('Correlation value', size=9)
     grid.cbar_axes[0].tick_params(labelsize=9)
 
-    title = 'Optimal IMP parameters\n'
+    title = 'Optimal parameters\n'
     heatmap.suptitle(title, size=12)
 
     #plt.tight_layout()

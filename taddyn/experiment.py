@@ -998,7 +998,7 @@ class Experiment(object):
                                       outfile=outfile, n_keep=n_keep, n_cpus=n_cpus,
                                       verbose=verbose, first=0,
                                       close_bins=close_bins, config=config, container=container,
-                                      experiment=self, coords=coords, zeros=zeros,
+                                      coords=coords, zeros=zeros,
                                       tmp_folder=tmp_folder,timeout_job=timeout_job,
                                       initial_conformation='tadbit' if not initial_conformation \
                                         else initial_conformation,

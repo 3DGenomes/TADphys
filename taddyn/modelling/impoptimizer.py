@@ -608,6 +608,9 @@ class IMPoptimizer(object):
            of the file name will determine the desired format).
         """
 
+        # Case in which there is more than 1 distance cutoff (dcutoff)
+        cut = self.get_best_parameters_dict()['dcutoff']
+        
         results = self._result_to_array()
         plot_2d_optimization_result((('scale', 'kbending', 'maxdist', 'lowfreq', 'upfreq'),
                                      ([float(i) for i in self.scale_range],
@@ -615,7 +618,7 @@ class IMPoptimizer(object):
                                       [float(i) for i in self.maxdist_range],
                                       [float(i) for i in self.lowfreq_range],
                                       [float(i) for i in self.upfreq_range]),
-                                     results), dcutoff=self.dcutoff_range, axes=axes, show_best=show_best,
+                                     results), dcutoff=cut, axes=axes, show_best=show_best,
                                     skip=skip, savefig=savefig,clim=clim)
 
 
