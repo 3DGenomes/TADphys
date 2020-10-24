@@ -2,6 +2,7 @@ from taddyn.squared_distance_matrix import squared_distance_matrix_calculation_w
 from scipy.stats                      import spearmanr, pearsonr, chisquare
 from taddyn.utils.tadmaths          import calinski_harabasz, nozero_log_list
 from itertools                        import combinations
+from pickle                          import load, dump, HIGHEST_PROTOCOL
 
 
 def get_contact_matrix(tdm, 
@@ -170,4 +171,19 @@ def correlate_with_real_data(tdm, models=None, cluster=None,
         if len(correl) < 2:
             return correl[next(iter(correl))]
         return correl
-        
+
+
+def save_models(models, outfile, minimal=()):
+        """
+        Saves all the models in pickle format (python object written to disk).
+        :param path_f: path where to save the pickle file
+        :param () minimal: list of items to exclude from save. Options:
+          - 'restraints': used for modeling common to all models
+          - 'zscores': used generate restraints common to all models
+          - 'original_data': used generate Z-scores common to all models
+          - 'log_objfun': generated during modeling model specific
+        """
+
+        out = open(outfile, 'wb')
+        dump(models, out, HIGHEST_PROTOCOL)
+        out.close()

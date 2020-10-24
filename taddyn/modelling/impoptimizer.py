@@ -394,11 +394,11 @@ class IMPoptimizer(object):
                         print verb + str(round(result, 4))
                 
                 count += ct
-                # Store the correlation for the TADbit parameters set
+                # Store the correlation for the TADdyn parameters set
                 self.results[(scale, kbending, maxdist, lowfreq, upfreq, cutoff)] = result
     
                 if savedata and result:
-                    models[(scale, kbending, maxdist, lowfreq, upfreq, cutoff)] = tdm._reduce_models(minimal=True)
+                    models[(scale, kbending, maxdist, lowfreq, upfreq, cutoff)] = tdm
 
         if savedata:
             out = open(savedata, 'w')
