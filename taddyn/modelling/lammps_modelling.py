@@ -164,7 +164,7 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a StructuralModels object
+    :returns: a TADdyn models dictionary
     """
 
     if not tmp_folder:
@@ -540,7 +540,7 @@ def lammps_simulate(lammps_folder, run_time,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a StructuralModels object
+    :returns: a TADdyn models dictionary
 
     """
     
@@ -627,7 +627,7 @@ def lammps_simulate(lammps_folder, run_time,
                             maxi = (kincrease, step, f)
                 # In case there is no restart file at all
                 if maxi[2] == '':
-                    print('Could not find a LAMMPS restart file')
+                    #print('Could not find a LAMMPS restart file')
                     # will check later if we have a path or a file
                     getIniConf = True
                     #restart_file = False
@@ -1048,7 +1048,7 @@ def run_lammps(kseed, lammps_folder, run_time,
                     restart_file_new = restart_file + 'restart_kincrease_%s_time_*.restart' %(kincrease)
                 else:
                     restart_file_new = '/'.join(restart_file.split('/')[:-1]) + '/restart_kincrease_%s_time_*.restart' %(kincrease)
-                print(restart_file_new)
+                #print(restart_file_new)
                 lmp.command("restart %i %s" %(int(steering_pairs['timesteps_per_k']/store_n_steps), restart_file_new))
 
             #lmp.command("reset_timestep %i" % resettime)

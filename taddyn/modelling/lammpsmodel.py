@@ -3,7 +3,7 @@
 
 
 """
-from pytadbit.modelling.structuralmodel import StructuralModel
+from taddyn.modelling.structuralmodel import StructuralModel
 
 class LAMMPSmodel(StructuralModel):
     """
