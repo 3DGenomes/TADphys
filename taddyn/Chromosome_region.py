@@ -315,7 +315,7 @@ class Chromosome_region(object):
     class HiC_data(dict):
         
         def __init__(self, items, size):
-            super().__init__(items)
+            self.update(items)
             self.__size = size
             self._size2 = size**2
             
