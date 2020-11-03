@@ -2,6 +2,7 @@ from pytadbit import Chromosome, HiC_data
 from pytadbit.parsers.hic_parser import read_matrix
 from pytadbit.modelling.impoptimizer import IMPoptimizer
 from pytadbit.modelling.structuralmodels import StructuralModels, load_structuralmodels
+from pytadbit.modelling.structuralmodel import StructuralModel
 from pytadbit.utils.three_dim_stats import calc_eqv_rmsd
 from pytadbit.utils.file_handling import mkdir
 from taddyn.Chromosome_region import Chromosome_region
@@ -54,13 +55,12 @@ optimizer.write_result('results.log')
 # upfreq=1.0
 # maxdist=6.0
      
-
+ 
 chr_region = Chromosome_region("Chr3", hic=nrm_data,
                                resolution=5000, size=len(nrm_data[0]),
                                zeros=[nrm_data_timepoint.bads for nrm_data_timepoint in nrm_data])
 for nparticles in [300]:
-#for nparticles in [25]:
-              
+                
     ensemble_of_models = chr_region.model_region(1, nparticles, n_models=100, n_keep=100,
                               n_cpus=16, cleanup=False, hide_log=False,
                               initial_conformation='random',                          
@@ -70,7 +70,7 @@ for nparticles in [300]:
                                       'lowfreq': -1.0},
                               tmp_folder='./TADdyn_on_Sox2_test_%sparticles/' % nparticles,
                               timeout_job=90000, useColvars=False)
-              
+                
     with open("TADdyn_on_Sox2_test_%sparticles.pickle" % nparticles, 'wb') as pickle_file:
         dump(ensemble_of_models,pickle_file)
                 
@@ -83,7 +83,7 @@ with open("TADdyn_on_Sox2_test_%sparticles.pickle" % 300, 'rb') as pickle_file:
 
 sm_snapshots=[]
 for stage in [0, 1, 2, 3, 4, 5, 6]:
-    models_stage = dict((i, ensemble_of_models['models'][mod])
+    models_stage = dict((i, StructuralModel(ensemble_of_models['models'][mod]))
                     for i, mod in enumerate(ensemble_of_models['stages'][stage*ensemble_of_models['models_per_step']]))
     sm_stage =StructuralModels(
             ensemble_of_models['loci'], models_stage, {}, 
@@ -94,7 +94,7 @@ for stage in [0, 1, 2, 3, 4, 5, 6]:
     
 sm=[]
 for stage in ensemble_of_models['stages']:
-    models_stage = dict((i, ensemble_of_models['models'][mod])
+    models_stage = dict((i, StructuralModel(ensemble_of_models['models'][mod]))
                     for i,mod in enumerate(ensemble_of_models['stages'][stage]))
     snapshot = stage//ensemble_of_models['models_per_step']
     sm_stage =StructuralModels(
@@ -103,32 +103,30 @@ for stage in ensemble_of_models['stages']:
             zscores=ensemble_of_models['zscores'][snapshot], config=ensemble_of_models['config'],
             zeros=ensemble_of_models['zeros'],restraints=ensemble_of_models['restraints'])
     sm.append(sm_stage)
-# sm['stages'] = ensemble_of_models['stages']
-# sm['models_per_step'] = ensemble_of_models['models_per_step']
 
 mkdir("Results")
-
+ 
 print( "1 - Z-score plots" )
 # A. TADbit z-score plot per stage (Figure 1B)
 mkdir("Results/Zscore_plots/")
 for stage in [0, 1, 2, 3, 4, 5, 6]:
     sm_snapshots[stage].zscore_plot(savefig="./Results/Zscore_plots/Zscore_plot_at_stage_%d.pdf" % stage)
 print( "DONE" )
-
+ 
 print( "2 - Snapshots" )
 # B. Model conformations visualization (Figure 1C)
 mkdir("Results/Snapshots/")
 for stage in [0, 1, 2, 3, 4, 5, 6]:
     sm_snapshots[stage].view_models(models=[0], tool="plot", savefig="./Results/Snapshots/Snapshot_trajectory_1_timepoint_%d.png" % int(stage*100))
 print( "DONE" )
- 
+  
 print( "3 - Contact matrices" )
 # C. Contact matrices at 200nm (Figure 1D)
 mkdir("Results/Contact_maps/")
 for timestep in range(0,601):
     sm[timestep].contact_map(cutoff=200., savefig="./Results/Contact_maps/Contact_map_at_timestep_%d.png" % timestep)
 print( "DONE" )
-
+ 
 print( "4 - Spearman correlation" )
 # D. Spearman correlation matrix between Hi-C and TADdyn models contact matrices (Figure 2A)
 mkdir("Results/Correlation_with_real_data/")
@@ -159,7 +157,7 @@ for pair in dRMSDs:
         all_dRMSD[(timestep_i,timestep_j)] = []
     all_dRMSD[(timestep_i,timestep_j)].append(dRMSDs[pair])
     fp_output.write("%d\t%d\t%d\t%d\t%lf\n" % (trajectory_i, timestep_i, trajectory_j, timestep_j, dRMSDs[pair]))
- 
+  
 # Compute median dRMSD
 fp_output=open("./Results/Models_dRMSDs/median_dRMSD_matrix.tab", "w")
 fp_output.write("%s\t%s\t%s\n" % ("#Timestep_i", "timestep_j", "dRMSD"))
