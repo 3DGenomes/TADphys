@@ -573,7 +573,7 @@ def lammps_simulate(lammps_folder, run_time,
 
     results = []
     def collect_result(result):
-        results.append((result[0], result[1]))
+        results.append((result[0], result[1], result[2]))
 
     initial_models = initial_conformation
     if not initial_models:
@@ -692,11 +692,14 @@ def lammps_simulate(lammps_folder, run_time,
 #             jobs[k].cancel()
 
     models = {}
+    initial_models = []
+    ############ WARNING ############
+    # PENDING TO ADD THE STORAGE OF INITIAL MODELS #
     if timepoints > 1:
         for t in range(timepoints):
             time_models = []
             for res in results:
-                (k,restarr) = res
+                (k,restarr,init_conf) = res
                 time_models.append(restarr[t])
             for i, m in enumerate(time_models[:n_keep]):
                 models[i+t*len(time_models[:n_keep])+n_keep] = m
@@ -705,14 +708,11 @@ def lammps_simulate(lammps_folder, run_time,
             #    models[i+t+1] = m
 
     else:
-        for i, (_, m) in enumerate(
+        for i, (_, m, im) in enumerate(
             sorted(results, key=lambda x: x[1][0]['objfun'])[:n_keep]):
             models[i] = m[0]
-
-    if not initial_conformation:
-        for k_id, k in enumerate(kseeds):
-            k_folder = lammps_folder + 'lammps_' + str(k) + '/'       
-            initial_models.append(read_conformation_file('%sinitial_conformation.dat' % k_folder))
+            if not initial_conformation:
+                initial_models += [im]
 
     if cleanup:
         for k in kseeds:
@@ -1454,8 +1454,10 @@ def run_lammps(kseed, lammps_folder, run_time,
             if pathfile.startswith('restart'):
                 os.remove(restart_path + pathfile)    
     ##################################################################
+    # Load initial conformation and return it
+    init_conf = read_conformation_file(initial_conformation)
 
-    return (kseed,result)
+    return (kseed, result, init_conf)
 
 def read_trajectory_file(fname):
 
