@@ -173,17 +173,23 @@ def correlate_with_real_data(tdm, models=None, cluster=None,
         return correl
 
 
-def save_models(models, outfile, minimal=()):
-        """
-        Saves all the models in pickle format (python object written to disk).
-        :param path_f: path where to save the pickle file
-        :param () minimal: list of items to exclude from save. Options:
-          - 'restraints': used for modeling common to all models
-          - 'zscores': used generate restraints common to all models
-          - 'original_data': used generate Z-scores common to all models
-          - 'log_objfun': generated during modeling model specific
-        """
+def save_models(models, outfile, minimal=(), convertToDict=True):
+    """
+    Saves all the models in pickle format (python object written to disk).
+    :param path_f: path where to save the pickle file
+    :param () minimal: list of items to exclude from save. Options:
+        - 'restraints': used for modeling common to all models
+        - 'zscores': used generate restraints common to all models
+        - 'original_data': used generate Z-scores common to all models
+        - 'log_objfun': generated during modeling model specific
+    :param True convertToDict: Convert LAMMPSmodel object to dictionary 
+        of dictionaries. Needed to convert to TADbit format without installing
+        TADdyn
+    """
 
-        out = open(outfile, 'wb')
-        dump(models, out, HIGHEST_PROTOCOL)
-        out.close()
+    if convertToDict == True:
+        models['models'] = dict((mod, dict(models['models'][mod]))
+                        for mod in models['models'])
+    out = open(outfile, 'wb')
+    dump(models, out, HIGHEST_PROTOCOL)
+    out.close()
