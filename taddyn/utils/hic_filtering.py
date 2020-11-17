@@ -1,10 +1,11 @@
 """
 06 Aug 2013
 """
-
+from __future__ import print_function    # (at top of module)
 from warnings                  import warn
 from sys                       import stderr
 from re                        import sub
+
 
 import numpy as np
 
@@ -311,7 +312,7 @@ def _best_window_size(sorted_prc, size, beg, end, verbose=False):
             count = 0
 
     if verbose:
-        print '        * first window size with stable median of cis-percentage: %d' % (win_size)
+        print('        * first window size with stable median of cis-percentage: %d' % (win_size))
     return win_size
 
 
@@ -419,12 +420,10 @@ def filter_by_cis_percentage(cisprc, beg=0.3, end=0.8, sigma=2, verbose=False,
         max_count = sorted_sum[-1] + 1
 
     if verbose:
-        print '        * Lower cutoff applied until bin number: %d' % (cutoffL)
-        print '        * too few  interactions defined as less than %9d interactions' % (
-            min_count)
-        print '        * Upper cutoff applied until bin number: %d' % (cutoffR)
-        print '        * too much interactions defined as more than %9d interactions' % (
-            max_count)
+        print('        * Lower cutoff applied until bin number: %d' % (cutoffL))
+        print('        * too few  interactions defined as less than %9d interactions' % (min_count))
+        print('        * Upper cutoff applied until bin number: %d' % (cutoffR))
+        print('        * too much interactions defined as more than %9d interactions' % (max_count))
 
     # plot
 
@@ -441,7 +440,6 @@ def filter_by_cis_percentage(cisprc, beg=0.3, end=0.8, sigma=2, verbose=False,
         elif cisprc[c][1] > max_count:  # don't need get here, already cought in previous condition
             badcol[c] = cisprc.get(c, [0, 0])[1]
             countU += 1
-    print '     => %d BAD bins (%d/%d/%d null/low/high counts) of %d (%.1f%%)' % (
-        len(badcol), countZ, countL, countU, size, float(len(badcol)) / size * 100)
+    print('     => %d BAD bins (%d/%d/%d null/low/high counts) of %d (%.1f%%)' % (len(badcol), countZ, countL, countU, size, float(len(badcol)) / size * 100))
 
     return badcol

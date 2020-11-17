@@ -1368,7 +1368,7 @@ class Experiment(object):
                                         for i in xrange(siz)])
                              for j in xrange(siz)])
         if print_it:
-            print out
+            print(out)
         else:
             return out + '\n'
 
