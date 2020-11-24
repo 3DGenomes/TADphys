@@ -72,8 +72,8 @@ Citation
 Please, cite this article if you use TADdyn.
 
 Marco Di Stefano, Ralph Stadhouders, Irene Farabella, David Castillo, François Serra, Thomas Graf, Marc A. Marti-Renom.
-**Dynamic simulations of transcriptional control during cell reprogramming reveal spatial chromatin caging.**
-*bioRxiv* 642009; `doi: https://doi.org/10.1101/642009`_
+**Transcriptional activation during cell reprogramming correlates with the formation of 3D open chromatin hubs**
+*Nat Commun* 11, 2020, 2564; `https://doi.org/10.1038/s41467-020-16396-1`.
 
 Methods implemented in TADdyn
 -----------------------------
