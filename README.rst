@@ -7,7 +7,16 @@
 +-----------------------+-+
 
 
-TADphys
+TADdyn is a Python library that allows to model and explore single or time-series 3C-based data.
+These datasets are constituted by interaction matrices that describe distinct stages of naturally
+occurring or induced cellular process such as the cell trans-differentiation, or reprogramming.
+With TADdyn the user can load at once the raw and normalised interaction binned matrices (Hi-C like matrices)
+at each of the experimental stages, build 4D models, and finally, extract structural properties from the models.
+The 4D models reproduce the expected interaction patterns at the experimental time-points,
+and also describe the structural modifications at intermediate moments (between stages) under the hypothesis
+that the changes occurring between consecutive experimental time-points are smooth. To do this,
+TADdyn is designed as a combination of restraint-based modelling, and steered Langevin dynamics of Physics-based
+chromatin models.
 
 Documentation
 *************
