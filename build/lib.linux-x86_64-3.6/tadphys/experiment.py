@@ -4,26 +4,22 @@
 
 """
 
-from copy                                import deepcopy as copy
-from sys                                 import stderr
-from warnings                            import warn
-from math                                import isnan
-from numpy                               import log2, array
-#from tadphys                            import HiC_data
-from tadphys.modelling.HIC_CONFIG         import CONFIG
-from tadphys.utils.hic_parser         import read_matrix
-from tadphys.utils.extraviews           import nicer
-from tadphys.utils.tadmaths             import zscore, nozero_log_matrix
-from tadphys.utils.hic_filtering        import hic_filtering_for_modelling
-# from tadphys.modelling.structuralmodels import StructuralModels
+from copy                         import deepcopy as copy
+from sys                          import stderr
+from warnings                     import warn
+from math                         import isnan
+from numpy                        import log2, array
+from tadphys.modelling.HIC_CONFIG import CONFIG
+from tadphys.utils.hic_parser     import read_matrix
+from tadphys.utils.extraviews     import nicer
+from tadphys.utils.tadmaths       import zscore, nozero_log_matrix
+from tadphys.utils.hic_filtering  import hic_filtering_for_modelling
 from collections import OrderedDict
 
 try:
-    from tadphys.modelling.impoptimizer  import IMPoptimizer
-    # from tadphys.modelling.imp_modelling import generate_3d_models
     from tadphys.modelling.lammps_modelling import generate_lammps_models
 except ImportError:
-    stderr.write('IMP not found, check PYTHONPATH\n')
+    pass
 
 try:
     import matplotlib.pyplot as plt

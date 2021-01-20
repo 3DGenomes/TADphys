@@ -12,7 +12,7 @@ def main():
     setup(
         name         = 'TADphys',
         version      = '0.1',
-        author       = 'Marco Di Stefano, David Castillo',
+        author       = 'Marco Di Stefano',
         author_email = 'marco.di.distefano.1985@gmail.com',
         ext_modules  = [squared_distance_matrix_module],
         packages     = ['tadphys', 'tadphys.utils',
