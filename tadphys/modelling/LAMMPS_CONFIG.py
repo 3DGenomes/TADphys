@@ -19,8 +19,8 @@ units = "lj"
 atom_style = "angle"
 
 # boundary conditions http://lammps.sandia.gov/doc/boundary.html
-#boundary = "p p p"
-boundary = "f f f"
+boundary = "p p p"
+#boundary = "f f f"
 
 # mass http://lammps.sandia.gov/doc/mass.html
 mass = "* 1.0"
@@ -31,7 +31,7 @@ neighbor = "3.0 nsq" # Optional for small and low density systems
 neigh_modify = "every 1 delay 1 check yes"
 
 # thermo
-run = 10000
+run = 100
 thermo = 1000 #int(float(run)/100)
 #thermo_style    custom   step temp epair emol press pxx pyy pzz pxy pxz pyz vol
 

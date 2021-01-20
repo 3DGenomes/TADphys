@@ -5,14 +5,14 @@
 
 from string                            import ascii_lowercase as letters
 from copy                              import deepcopy as copy
-from cPickle                           import load, dump
+from pickle                            import load, dump
 from random                            import random
 from math                              import sqrt
 from sys                               import stderr
 from os.path                           import exists
-import taddyn
-from taddyn.experiment               import Experiment
-# from taddyn.alignment                import Alignment, randomization_test
+import tadphys
+from tadphys.experiment               import Experiment
+# from tadphys.alignment                import Alignment, randomization_test
 
 try:
     import matplotlib.pyplot as plt
@@ -276,7 +276,7 @@ class Chromosome(object):
         This can also be done directly with Chromosome.experiments[name].
 
         :param name: name of the experiment to select
-        :returns: :class:`taddyn.Experiment`
+        :returns: :class:`tadphys.Experiment`
         """
         for exp in self.experiments:
             if exp.name == name:
@@ -379,9 +379,9 @@ class Chromosome(object):
     #        simply shuffled
     #     :param 1000 rnd_num: number of randomizations to do
     #     :param reciprocal method: if global, Needleman-Wunsch is used to align
-    #         (see :func:`taddyn.boundary_aligner.globally.needleman_wunsch`);
+    #         (see :func:`tadphys.boundary_aligner.globally.needleman_wunsch`);
     #         if reciprocal, a method based on reciprocal closest boundaries is
-    #         used (see :func:`taddyn.boundary_aligner.reciprocally.reciprocal`)
+    #         used (see :func:`tadphys.boundary_aligner.reciprocally.reciprocal`)
 
     #     :returns: an alignment object or, if the randomizattion was invoked,
     #        an alignment object, and a list of statistics that are, the alignment
@@ -485,7 +485,7 @@ class Chromosome(object):
     #              verbose=True, max_tad_size="max", heuristic=True,
     #              batch_mode=False, **kwargs):
     #     """
-    #     Call the :func:`taddyn.tadbit.tadbit` function to calculate the
+    #     Call the :func:`tadphys.tadbit.tadbit` function to calculate the
     #     position of Topologically Associated Domain boundaries
 
     #     :param experiment: A square matrix of interaction counts of Hi-C
@@ -639,7 +639,7 @@ class Chromosome(object):
     #     :param True normalized: show the normalized data (weights might have
     #        been calculated previously). *Note: white rows/columns may appear in
     #        the matrix displayed; these rows correspond to filtered rows (see*
-    #        :func:`taddyn.utils.hic_filtering.hic_filtering_for_modelling` *)*
+    #        :func:`tadphys.utils.hic_filtering.hic_filtering_for_modelling` *)*
     #     :param True relative: color scale is relative to the whole matrix of
     #        data, not only to the region displayed
     #     :param True decorate: draws color bar, title and axes labels
@@ -903,14 +903,14 @@ class Chromosome(object):
 class ExperimentList(list):
     """
     Inherited from python built in :py:func:`list`, modified for TADbit
-    :class:`taddyn.Experiment`.
+    :class:`tadphys.Experiment`.
 
     Mainly, `getitem`, `setitem`, and `append` were modified in order to
     be able to search for experiments by index or by name, and to add
     experiments simply using Chromosome.experiments.append(Experiment).
 
     The whole ExperimentList object is linked to a Chromosome instance
-    (:class:`taddyn.Chromosome`).
+    (:class:`tadphys.Chromosome`).
 
     """
     def __init__(self, thing, crm):
@@ -971,12 +971,12 @@ class ExperimentList(list):
 
 class AlignmentDict(dict):
     """
-    :py:func:`dict` of :class:`taddyn.Alignment`
+    :py:func:`dict` of :class:`tadphys.Alignment`
 
     Modified getitem, setitem, and append in order to be able to search
     alignments by index or by name.
 
-    linked to a :class:`taddyn.Chromosome`
+    linked to a :class:`tadphys.Chromosome`
     """
 
     def __getitem__(self, nam):

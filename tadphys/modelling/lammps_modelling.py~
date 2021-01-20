@@ -5,7 +5,7 @@
 """
 from string import ascii_uppercase as uc, ascii_lowercase as lc
 from os.path import exists
-from random import randint, seed, random, sample, shuffle
+from random import uniform, randint, seed, random, sample, shuffle
 from pickle import load, dump
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
@@ -21,11 +21,12 @@ import multiprocessing
 
 from numpy import sin, cos, arccos, sqrt, fabs, pi
 import numpy as np
+from mpi4py import MPI
 from lammps import lammps
 
-from taddyn.modelling import LAMMPS_CONFIG as CONFIG
-from taddyn.modelling.lammpsmodel import LAMMPSmodel
-from taddyn.modelling.restraints import HiCBasedRestraints
+from tadphys.modelling import LAMMPS_CONFIG as CONFIG
+from tadphys.modelling.lammpsmodel import LAMMPSmodel
+from tadphys.modelling.restraints import HiCBasedRestraints
 
 class InitalConformationError(Exception):
     """
@@ -102,7 +103,7 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
 
        ::
 
-         from taddyn.modelling.HIC_CONFIG import HIC_CONFIG
+         from tadphys.modelling.HIC_CONFIG import HIC_CONFIG
 
          where CONFIG is a dictionary of dictionaries to be passed to this function:
 
@@ -164,11 +165,11 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a TADdyn models dictionary
+    :returns: a Tadphys models dictionary
     """
 
     if not tmp_folder:
-        tmp_folder = '/tmp/taddyn_tmp_%s/' % (
+        tmp_folder = '/tmp/tadphys_tmp_%s/' % (
             ''.join([(uc + lc)[int(random() * 52)] for _ in range(4)]))
     else:
         if tmp_folder[-1] != '/':
@@ -198,7 +199,8 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
     if first is None:
         first = min([int(j) for i in zscores[0] for j in zscores[0][i]] +
                     [int(i) for i in zscores[0]])
-    LOCI  = list(range(first, nloci + first))
+    LOCI = list(range(first, nloci + first))
+    LOCI = 20000 
     
     # random inital number
     global START
@@ -269,19 +271,25 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
                 single_m['z'][i] -= cm0['z']
         ini_sm_model = [[single_sm.copy()] for single_sm in sm]
 
-    models, ini_model = lammps_simulate(lammps_folder=tmp_folder, run_time=run_time,
-                             initial_conformation=ini_sm_model,
-                             connectivity=connectivity,
-                             steering_pairs=steering_pairs,
-                             time_dependent_steering_pairs=time_dependent_steering_pairs,
-                             initial_seed=initial_seed,
-                             n_models=n_keep, n_keep=n_keep, n_cpus=n_cpus,
-                             keep_restart_out_dir=keep_restart_out_dir,
-                             confining_environment=container, timeout_job=timeout_job,
-                             cleanup=cleanup, to_dump=int(timesteps_per_k/100.),
-                             hide_log=hide_log, restart_path=restart_path,
-                             store_n_steps=store_n_steps,
-                             useColvars=useColvars)
+    models, ini_model = lammps_simulate(lammps_folder=tmp_folder,
+                                        run_time=run_time,
+                                        initial_conformation=ini_sm_model,
+                                        connectivity=connectivity,
+                                        steering_pairs=steering_pairs,
+                                        time_dependent_steering_pairs=time_dependent_steering_pairs,
+                                        initial_seed=initial_seed,
+                                        n_models=n_keep,
+                                        n_keep=n_keep,
+                                        n_cpus=n_cpus,
+                                        keep_restart_out_dir=keep_restart_out_dir,
+                                        confining_environment=container,
+                                        timeout_job=timeout_job,
+                                        cleanup=cleanup, to_dump=int(timesteps_per_k/100.),
+                                        hide_log=hide_log,
+                                        chromosome_particle_numbers=chromosome_particle_numbers,
+                                        restart_path=restart_path,
+                                        store_n_steps=store_n_steps,
+                                        useColvars=useColvars)
 #     for i, m in enumerate(models.values()):
 #         m['index'] = i
     if outfile:
@@ -347,6 +355,7 @@ def generate_lammps_models(zscores, resolution, nloci, start=1, n_models=5000,
 def init_lammps_run(lmp, initial_conformation,
                     neighbor=CONFIG.neighbor,
                     hide_log=True,
+                    chromosome_particle_numbers=None,
                     connectivity="FENE",
                     restart_file=False):
 
@@ -476,15 +485,18 @@ def lammps_simulate(lammps_folder, run_time,
                     connectivity="FENE",
                     initial_seed=0, n_models=500, n_keep=100,
                     neighbor=CONFIG.neighbor, tethering=True,
-                    minimize=True, compress_with_pbc=False,
+                    minimize=True, compress_with_pbc=False,                    
                     compress_without_pbc=False,
+                    initial_relaxation=None,
                     keep_restart_out_dir=None, outfile=None, n_cpus=1,
                     confining_environment=['cube',100.],
                     steering_pairs=None,
                     time_dependent_steering_pairs=None,
-                    loop_extrusion_dynamics=None, cleanup = True,
+                    compartmentalization=None,
+                    loop_extrusion_dynamics=None, cleanup = False,
                     to_dump=100000, pbc=False, timeout_job=3600,
                     hide_log=True,
+                    chromosome_particle_numbers=None,
                     restart_path=False,
                     store_n_steps=10,
                     useColvars=False):
@@ -540,7 +552,7 @@ def lammps_simulate(lammps_folder, run_time,
         restart_file != False
     :param False useColvars: True if you want the restrains to be loaded by colvars
 
-    :returns: a TADdyn models dictionary
+    :returns: a Tadphys models dictionary
 
     """
     
@@ -557,7 +569,7 @@ def lammps_simulate(lammps_folder, run_time,
         timepoints = (len(time_dependent_steering_pairs['colvar_input'])-1) * \
             time_dependent_steering_pairs['colvar_dump_freq']
 
-    chromosome_particle_numbers = [int(x) for x in [len(LOCI)]]
+    #chromosome_particle_numbers = [int(x) for x in [len(LOCI)]]
     chromosome_particle_numbers.sort(key=int,reverse=True)
 
     kseeds = []
@@ -662,21 +674,24 @@ def lammps_simulate(lammps_folder, run_time,
                                 failedSeedLog=[failedSeedLog, k])
             pool.apply_async(jobs[k],
                             args=(k, k_folder, run_time,
-                                ini_conf, connectivity,
-                                neighbor,
-                                tethering, minimize,
-                                compress_with_pbc, compress_without_pbc,
-                                confining_environment,
-                                steering_pairs,
-                                time_dependent_steering_pairs,
-                                loop_extrusion_dynamics,
-                                to_dump, pbc, hide_log,
-                                keep_restart_out_dir2,
-                                restart_file,
-                                model_path,
-                                store_n_steps,
-                                useColvars,), callback=collect_result)
-    #                         , timeout=timeout_job)
+                                  ini_conf, connectivity,
+                                  neighbor,
+                                  tethering, minimize,
+                                  compress_with_pbc, compress_without_pbc,
+                                  initial_relaxation,
+                                  confining_environment,
+                                  steering_pairs,
+                                  time_dependent_steering_pairs,
+                                  compartmentalization,
+                                  loop_extrusion_dynamics,
+                                  to_dump, pbc, hide_log,
+                                  chromosome_particle_numbers,
+                                  keep_restart_out_dir2,
+                                  restart_file,
+                                  model_path,
+                                  store_n_steps,
+                                  useColvars,), callback=collect_result)
+            #                         , timeout=timeout_job)
     pool.close()
     pool.join()
 
@@ -731,12 +746,15 @@ def run_lammps(kseed, lammps_folder, run_time,
                neighbor=CONFIG.neighbor,
                tethering=False, minimize=True,
                compress_with_pbc=None, compress_without_pbc=None,
+               initial_relaxation=None,
                confining_environment=None,
                steering_pairs=None,
                time_dependent_steering_pairs=None,
+               compartmentalization=None,
                loop_extrusion_dynamics=None,
                to_dump=10000, pbc=False,
                hide_log=True,
+               chromosome_particle_numbers=None,
                keep_restart_out_dir2=None,
                restart_file=False,
                model_path=False, 
@@ -812,8 +830,11 @@ def run_lammps(kseed, lammps_folder, run_time,
     :returns: a LAMMPSModel object
 
     """
+    
 
-    lmp = lammps(cmdargs=['-screen','none','-log',lammps_folder+'log.lammps','-nocite'])
+    lmp = lammps(cmdargs=['-package','omp','4','-suffix','omp','-screen','none','-log',lammps_folder+'log.lammps','-nocite'])
+    me = MPI.COMM_WORLD.Get_rank()
+    nprocs = MPI.COMM_WORLD.Get_size()
     # check if we have a restart file or a path to which restart
     if restart_file == False:
         doRestart = False
@@ -840,9 +861,10 @@ def run_lammps(kseed, lammps_folder, run_time,
                 restart_file=restart_file)
     else:
         init_lammps_run(lmp, initial_conformation,
-                    neighbor=neighbor,
-                    hide_log=hide_log,
-                    connectivity=connectivity)
+                        neighbor=neighbor,
+                        hide_log=hide_log,
+                        chromosome_particle_numbers=chromosome_particle_numbers,
+                        connectivity=connectivity)
 
     lmp.command("dump    1       all    custom    %i   %slangevin_dynamics_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
     #lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id append yes")
@@ -873,6 +895,7 @@ def run_lammps(kseed, lammps_folder, run_time,
     # Define the langevin dynamics integrator
     lmp.command("fix 1 all nve")
     lmp.command("fix 2 all langevin 1.0  1.0  2.0 %i" % kseed)
+
     # Define the tethering to the center of the confining environment
     if tethering:
         lmp.command("fix 3 all spring tether 50.0 0.0 0.0 0.0 0.0")
@@ -972,6 +995,14 @@ def run_lammps(kseed, lammps_folder, run_time,
         print("# New particle density (nparticles/volume)", lmp.get_natoms()/volume)
         print("")
 
+    if initial_relaxation:
+        if to_dump:
+            lmp.command("undump 1")
+            lmp.command("dump    1       all    custom    %i   %sinitial_relaxation_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
+        lmp.command("reset_timestep 0")
+        lmp.command("run %i" % initial_relaxation)
+        lmp.command("write_data relaxed_conformation.txt nocoeff")
+        
     timepoints = 1
     xc = []
     # Setup the pairs to co-localize using the COLVARS plug-in
@@ -1068,7 +1099,7 @@ def run_lammps(kseed, lammps_folder, run_time,
         sys.stdout.flush()            
 
         time_dependent_steering_pairs['colvar_output'] = lammps_folder+os.path.basename(time_dependent_steering_pairs['colvar_output'])
-        # Performing the adaptation step from initial conformation to TADdyn excluded volume
+        # Performing the adaptation step from initial conformation to Tadphys excluded volume
         if time_dependent_steering_pairs['adaptation_step']:
             restraints = {}
             for time_point in time_points[0:1]:
@@ -1077,7 +1108,7 @@ def run_lammps(kseed, lammps_folder, run_time,
                 # This Adaptation could be discarded in the trajectory files.
                 if to_dump:
                     lmp.command("undump 1")
-                    lmp.command("dump    1       all    custom    %i  %sadapting_MD_from_initial_conformation_to_TADdyn_at_time_point_%s.XYZ  id  xu yu zu" % (to_dump, lammps_folder, time_point))
+                    lmp.command("dump    1       all    custom    %i  %sadapting_MD_from_initial_conformation_to_Tadphys_at_time_point_%s.XYZ  id  xu yu zu" % (to_dump, lammps_folder, time_point))
                     lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id append yes")
 
                 restraints[time_point] = {}
@@ -1299,42 +1330,93 @@ def run_lammps(kseed, lammps_folder, run_time,
             
                     os.remove("%sout.colvars.traj.BAK" % lammps_folder)
 
+    # Set interactions for chromosome compartmentalization
+    if compartmentalization:
+        if to_dump:
+            lmp.command("undump 1")
+            lmp.command("dump    1       all    custom    %i   %scompartmentalization_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
+
+        # First we have to partition the genome in the defined compartments
+        for group in compartmentalization['partition']:
+            list_of_particles = get_list(compartmentalization['partition'][group])
+            for atom in list_of_particles:
+                #print("set atom %s type %s" % (atom,group+1))
+                lmp.command("set atom %s type %s" % (atom,group+1))
+
+        # Second we have to define the type of interactions
+        for pair in compartmentalization['interactions']:
+            #pair_coeff t1 t2 epsilon sigma rc
+            t1 = pair[0]+1
+            t2 = pair[1]+1 
+            if t1 > t2:
+                t1 = pair[1]+1
+                t2 = pair[0]+1 
+
+            epsilon = compartmentalization['interactions'][pair][1]
+
+            try:
+                sigma1 = compartmentalization['radii'][pair[0]]
+            except:
+                sigma1 = 0.5
+            try: 
+                sigma2 = compartmentalization['radii'][pair[1]]
+            except:
+                sigma2 = 0.5
+            sigma = sigma1 + sigma2
+                
+            if compartmentalization['interactions'][pair][0] == "attraction":
+                rc = sigma * 2.5
+            if compartmentalization['interactions'][pair][0] == "repulsion":
+                rc = sigma * 1.12246152962189
+
+            print("pair_coeff %s %s lj/cut %s %s %s" % (t1,t2,epsilon,sigma,rc))
+            lmp.command("pair_coeff %s %s lj/cut %s %s %s" % (t1,t2,epsilon,sigma,rc))
+        try:
+            lmp.command("run %s" % (compartmentalization['runtime']))
+        except:
+            pass
+
+            
     # Setup the pairs to co-localize using the COLVARS plug-in
     if loop_extrusion_dynamics:
 
         # Start relaxation step
-        lmp.command("reset_timestep 0")
-        lmp.command("run %i" % loop_extrusion_dynamics['timesteps_relaxation'])
-
+        try:
+            lmp.command("reset_timestep 0")
+            lmp.command("run %i" % loop_extrusion_dynamics['timesteps_relaxation'])
+        except:
+            pass
+            
         lmp.command("reset_timestep 0")
         # Start Loop extrusion dynamics
         if to_dump:
             lmp.command("undump 1")
             lmp.command("dump    1       all    custom    %i   %sloop_extrusion_MD_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
-            #lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id")
-
-        # List of target loops of the form [(loop1_start,loop1_stop),...,(loopN_start,loopN_stop)]
-        target_loops  = read_target_loops_input(loop_extrusion_dynamics['target_loops_input'],
-                                                loop_extrusion_dynamics['chrlength'],
-                                                loop_extrusion_dynamics['perc_enfor_loops'])
 
         # Randomly extract starting point of the extrusion dynamics between start and stop
-        initial_loops = draw_loop_extrusion_starting_points(target_loops,
-                                                            loop_extrusion_dynamics['chrlength'])
+        extruders_positions = []
+        nextruders = int(chromosome_particle_numbers[0]/loop_extrusion_dynamics['separation'])
+        print(nextruders)
+        for extruder in range(nextruders):
+            extruders_positions.append(draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0]))
 
-        # Maximum number of particles to be extruded during the dynamics
-        maximum_number_of_extruded_particles = get_maximum_number_of_extruded_particles(target_loops, initial_loops)
-        print("Number of LES",maximum_number_of_extruded_particles)
+        # Initialise the lifetime of each extruder
+        extruders_lifetimes = []
+        for extruder in range(nextruders):
+            extruders_lifetimes.append(int(0))
+        print(extruders_positions, extruders_lifetimes)
+
+        lmp.command("compute xu all property/atom xu")
+        lmp.command("compute yu all property/atom yu")
+        lmp.command("compute zu all property/atom zu")
 
         # Loop extrusion steps
-        for LES in range(1,maximum_number_of_extruded_particles):
-
-            # Loop extrusion steps
-
-            # Update the Lennard-Jones coefficients between extruded particles
+        for LES in range(int(run_time/loop_extrusion_dynamics['extrusion_time'])):
+            thermo_style="thermo_style   custom   step temp epair emol"
+            
+            # Update the bond restraint
             loop_number = 1
-            for particle1,particle2 in initial_loops:
-
+            for particle1,particle2 in extruders_positions:
                 print("# fix LE%i all restrain bond %i  %i %f %f %f" % (loop_number,
                                                                         particle1,
                                                                         particle2,
@@ -1348,15 +1430,38 @@ def run_lammps(kseed, lammps_folder, run_time,
                                                                             loop_extrusion_dynamics['attraction_strength'],
                                                                             loop_extrusion_dynamics['attraction_strength'],
                                                                             loop_extrusion_dynamics['equilibrium_distance']))
-
+                lmp.command("variable x%i equal c_xu[%i]" % (particle1, particle1))
+                lmp.command("variable x%i equal c_xu[%i]" % (particle2, particle2))
+                lmp.command("variable y%i equal c_yu[%i]" % (particle1, particle1))
+                lmp.command("variable y%i equal c_yu[%i]" % (particle2, particle2))
+                lmp.command("variable z%i equal c_zu[%i]" % (particle1, particle1))
+                lmp.command("variable z%i equal c_zu[%i]" % (particle2, particle2))
+                
+                lmp.command("variable xLE%i equal v_x%i-v_x%i" % (loop_number, particle1, particle2))
+                lmp.command("variable yLE%i equal v_y%i-v_y%i" % (loop_number, particle1, particle2))
+                lmp.command("variable zLE%i equal v_z%i-v_z%i" % (loop_number, particle1, particle2))
+                lmp.command("variable dist_%i_%i equal sqrt(v_xLE%i*v_xLE%i+v_zLE%i*v_zLE%i+v_zLE%i*v_zLE%i)" % (particle1,
+                                                                                                                 particle2,
+                                                                                                                 loop_number,
+                                                                                                                 loop_number,
+                                                                                                                 loop_number,
+                                                                                                                 loop_number,
+                                                                                                                 loop_number,
+                                                                                                                 loop_number))
+                thermo_style += " v_dist_%i_%i" % (particle1, particle2)
                 loop_number += 1
 
+            lmp.command("%s" % thermo_style)
             # Doing the LES
-            lmp.command("run %i" % loop_extrusion_dynamics['timesteps_per_loop_extrusion_step'])
-
+            lmp.command("run %i" % loop_extrusion_dynamics['extrusion_time'])
+            
+            # update the lifetime of each extruder
+            for extruder in range(nextruders):
+                extruders_lifetimes[extruder] = extruders_lifetimes[extruder] + 1
+            
             # Remove the loop extrusion restraint!
             loop_number = 1
-            for particle1,particle2 in initial_loops:
+            for particle1,particle2 in extruders_positions:
 
                 print("# unfix LE%i" % (loop_number))
                 lmp.command("unfix LE%i" % (loop_number))
@@ -1366,65 +1471,65 @@ def run_lammps(kseed, lammps_folder, run_time,
             # Update the particles involved in the loop extrusion interaction:
             # decrease the intial_start by one until you get to start
             # increase the intial_stop by one until you get to stop
-            for initial_loop, target_loop in zip(initial_loops,target_loops):
+            for extruder in range(len(extruders_positions)):
+                # If the left part reaches the start of the chromosome -> Stop extruding
+                if extruders_positions[extruder][0] > 1:
+                    random_number = uniform(0, 1)
+                    if random_number <= loop_extrusion_dynamics['left_extrusion_rate']:
+                        extruders_positions[extruder][0] -= 1
+                # If the right part reaches the end of the chromosome -> Stop extruding
+                if extruders_positions[extruder][1] < chromosome_particle_numbers[0]:
+                    random_number = uniform(0, 1)
+                    if random_number <= loop_extrusion_dynamics['right_extrusion_rate']:
+                        extruders_positions[extruder][1] += 1
+                # If the extruder reached its lifetime, put it in another position
+                if extruders_lifetimes[extruder] == loop_extrusion_dynamics['lifetime']:
+                    extruders_positions[extruder] = draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0])
+                    # Re-initialise the lifetime of the extruder
+                    extruders_lifetimes[extruder] = 0
+                # Check presence of barriers
+                if loop_extrusion_dynamics['barriers_permeability'] < 1.0:                    
+                    # If a motor tries to overcome a barrier we stop it with a probability > than the permeability
+                    # If the barrier is on the left of the extruders, which is extruding contrary to the chain index, we have to re-put the extruder forwards
+                    if extruders_positions[extruder][0] in loop_extrusion_dynamics['barriers']:
+                        random_number = uniform(0, 1)
+                        if random_number >= loop_extrusion_dynamics['barriers_permeability']:
+                            extruders_positions[extruder][0] += 1
+                    # If the barrier is on the left of the extruders, which is extruding with the chain index, we have to re-put the extruder backwards
+                    if extruders_positions[extruder][1] in loop_extrusion_dynamics['barriers']:
+                        random_number = uniform(0, 1)
+                        if random_number >= loop_extrusion_dynamics['barriers_permeability']:
+                            extruders_positions[extruder][1] -= 1
+                        
+            print(extruders_positions,extruders_lifetimes)
 
-                if initial_loop[0] > target_loop[0]:
-                    initial_loop[0] -= 1
-                if initial_loop[1] < target_loop[1]:
-                    initial_loop[1] += 1
-
-
-
-    #if to_dump:
-    #    lmp.command("undump 1")
-    #    lmp.command("dump    1       all    custom    %i   langevin_dynamics_*.XYZ  id  xu yu zu" % to_dump)
-    #    lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id append yes")
-
+    ### Put here the creationg of a pickle with the complete trajectory ###
+    if to_dump:
+        lmp.command("undump 1")
+        lmp.command("dump    1       all    custom    %i   %sloop_extrusion_MD_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
     # Post-processing analysis
-    if time_dependent_steering_pairs:
+    # Save coordinates
+    #for time in range(0,runtime,to_dump):
+    #    xc.append(np.array(read_trajectory_file("%s/loop_extrusion_MD_%s.XYZ" % (lammps_folder, time))))
         
-        if useColvars == True:
-            copyfile("%sout.colvars.traj" % lammps_folder, "%srestrained_pairs_equilibrium_distance_vs_timestep_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(time_point), str(time_point+1)))
-    
-    
-            os.remove("%sout.colvars.traj" % lammps_folder)
-            os.remove(time_dependent_steering_pairs['colvar_output'])
-            for time_point in time_points[0:-1]:
-                # Compute energy associated to the restraints: something like the IMP objective function
-                #compute_the_objective_function("%srestrained_pairs_equilibrium_distance_vs_timestep_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(time_point), str(time_point+1)),
-                #                               "%sobjective_function_profile_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(time_point), str(time_point+1)),
-                #                               time_point,
-                #                               time_dependent_steering_pairs['timesteps_per_k_change'][time_point])
-            
-                # Compute the % of satysfied constraints between 2. sigma = 2./sqrt(k)
-                compute_the_percentage_of_satysfied_restraints("%srestrained_pairs_equilibrium_distance_vs_timestep_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(time_point), str(time_point+1)),
-                                                               restraints[time_point],
-                                                               "%spercentage_of_established_restraints_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(time_point), str(time_point+1)),
-                                                               time_point,
-                                                               time_dependent_steering_pairs['timesteps_per_k_change'][time_point])
-                
-        for time_point in time_points[0:-1]:        
-            xc.append(np.array(read_trajectory_file("%ssteered_MD_from_time_point_%s_to_time_point_%s.XYZ" % (lammps_folder, time_point, time_point+1))))
-    
-    else:    
-        # Managing the final model
-        xc.append(np.array(lmp.gather_atoms("x",1,3)))
+    #xc.append(np.array(lmp.gather_atoms("x",1,3)))
             
     lmp.close()    
         
     result = []
     for stg in range(len(xc)):
-        log_objfun = read_objective_function("%sobj_fun_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(stg), str(stg+1)))
+        #log_objfun = read_objective_function("%sobj_fun_from_time_point_%s_to_time_point_%s.txt" % (lammps_folder, str(stg), str(stg+1)))
+        log_objfun = [0.0]
         for timepoint in range(1,timepoints+1):
             lammps_model = LAMMPSmodel({'x'          : [],
-                                  'y'          : [],
-                                  'z'          : [],
-                                  'cluster'    : 'Singleton',
-                                  'log_objfun' : log_objfun,
-                                  'objfun'     : log_objfun[-1],
-                                  'radius'     : float(CONFIG.HiC['resolution'] * CONFIG.HiC['scale'])/2,
-                                  'index'  : kseed+timepoint,
-                                  'rand_init'  : str(kseed+timepoint)})
+                                        'y'          : [],
+                                        'z'          : [],
+                                        'cluster'    : 'Singleton',
+                                        'log_objfun' : log_objfun,
+                                        'objfun'     : log_objfun[-1],
+                                        'radius'     : 0.5, #float(CONFIG.HiC['resolution'] * CONFIG.HiC['scale'])/2,
+                                        'index'  : kseed+timepoint,
+                                        'rand_init'  : str(kseed+timepoint)})
         
             if pbc:
                 store_conformation_with_pbc(xc[stg], lammps_model, confining_environment)    
@@ -2329,26 +2434,31 @@ def generate_chromosome_rosettes_conformation ( chromosome_particle_numbers ,
             
             # Checking that the beads are all inside the confining environment and are not overlapping
             for rosette_pair in list(combinations(final_rosettes,2)):
-                
-                for x0,y0,z0 in zip(rosette_pair[0]['x'],rosette_pair[0]['y'],rosette_pair[0]['z']):
-                    particle_inside = check_point_inside_the_confining_environment(x0, y0, z0,
-                                                                                   particle_radius,
-                                                                                   confining_environment)
-                    
-                    if particle_inside == 0: # 0 means that the particle is outside -> PROBLEM!!!
-                        print("Particle",x0,y0,z0,"is out of the confining environment\n")
-                        break
-
-                    for x1,y1,z1 in zip(rosette_pair[1]['x'],rosette_pair[1]['y'],rosette_pair[1]['z']):
-                        particles_overlap = check_particles_overlap(x0,y0,z0,x1,y1,z1,particle_radius)
-
-                        if particles_overlap == 0: # 0 means that the particles are overlapping -> PROBLEM!!!
-                            print("Particle",x0,y0,z0,"and",x1,y1,z1,"overlap\n")         
-                            break
-                    if particle_inside == 0 or particles_overlap == 0:
-                        break
-                if particle_inside == 0 or particles_overlap == 0:
+                molecule0 = list(zip(rosette_pair[0]['x'],rosette_pair[0]['y'],rosette_pair[0]['z']))
+                molecule1 = list(zip(rosette_pair[1]['x'],rosette_pair[1]['y'],rosette_pair[1]['z']))
+                distances = scipy.spatial.distance.cdist(molecule1,molecule0)
+                print(len(molecule0),len(molecule0[0]),distances.min())
+                if distances.min() < particle_radius*2.0*0.95:
+                    particles_overlap = 0
                     break
+
+            if particles_overlap != 0:
+                for r in xrange(len(final_rosettes)):
+                    molecule0 = list(zip(final_rosettes[r]['x'],final_rosettes[r]['y'],final_rosettes[r]['z']))
+                    print(len(molecule0),len(molecule0[0]))
+
+                    distances = scipy.spatial.distance.cdist(molecule0,molecule0)
+                    print(distances.min())
+                    for i in xrange(len(molecule0)):
+                        for j in xrange(i+1,len(molecule0)):
+                            if distances[(i,j)] < particle_radius*2.0*0.95:
+                                particles_overlap = 0
+                            if particles_overlap == 0:
+                                break
+                        if particles_overlap == 0:
+                            break
+                    if particles_overlap == 0:
+                        break
             
         # Writing the final_rosettes conformation
         print("Succesfully generated conformation number %d\n" % (cnt+1))
@@ -2495,9 +2605,12 @@ def generate_rosettes(chromosome_particle_numbers, rosette_radius, particle_radi
         rosette['z'] = []        
         
         # Position of the first particle (x_0, 0.0, 0.0)
-        rosette['x'].append(rosette_radius * (0.38 + (1 - 0.38) * cos(6*phi) * cos(6*phi)) * cos(phi))
-        rosette['y'].append(rosette_radius * (0.38 + (1 - 0.38) * cos(6*phi) * cos(6*phi)) * sin(phi))
-        rosette['z'].append(phi / (2.0 * pi))
+        k = 6.
+        x = 0.38
+        p = 1.0
+        rosette['x'].append(rosette_radius * (x + (1 - x) * cos(k*phi) * cos(k*phi)) * cos(phi))
+        rosette['y'].append(rosette_radius * (x + (1 - x) * cos(k*phi) * cos(k*phi)) * sin(phi))
+        rosette['z'].append(p * phi / (2.0 * pi))
         #print "First bead is in position: %f %f %f" % (rosette['x'][0], rosette['y'][0], rosette['z'][0])
 
         # Building the chain: The rosette is growing along the positive z-axes
@@ -2506,8 +2619,8 @@ def generate_rosettes(chromosome_particle_numbers, rosette_radius, particle_radi
             distance = 0.0
             while distance < (particle_radius*2.0): 
                 phi   = phi + 0.001
-                x_tmp = rosette_radius * (0.38 + (1 - 0.38) * cos(6*phi) * cos(6*phi)) * cos(phi)
-                y_tmp = rosette_radius * (0.38 + (1 - 0.38) * cos(6*phi) * cos(6*phi)) * sin(phi)
+                x_tmp = rosette_radius * (x + (1 - x) * cos(k*phi) * cos(k*phi)) * cos(phi)
+                y_tmp = rosette_radius * (x + (1 - x) * cos(k*phi) * cos(k*phi)) * sin(phi)
                 z_tmp = phi / (2.0 * pi)     
                 distance  = sqrt((x_tmp - rosette['x'][-1])*(x_tmp - rosette['x'][-1]) +
                                  (y_tmp - rosette['y'][-1])*(y_tmp - rosette['y'][-1]) +
@@ -3463,20 +3576,29 @@ def read_target_loops_input(input_filename, chromosome_length, percentage):
         
 ##########
 
-def draw_loop_extrusion_starting_points(target_loops, chromosome_length):
-    initial_loops = []
+#def draw_loop_extrusion_starting_points(target_loops, chromosome_length):
+#    initial_loops = []
     # Scroll the target loops and draw a point between each start and stop
-    for target_loop in target_loops:
+#    for target_loop in target_loops:
 
-        random_particle =  randint(target_loop[0], target_loop[1])
+#        random_particle =  randint(target_loop[0], target_loop[1])
 
-        loop = []
-        loop.append(random_particle)
-        loop.append(random_particle+1)
+#        loop = []
+#        loop.append(random_particle)
+#        loop.append(random_particle+1)
 
-        initial_loops.append(loop)
+#        initial_loops.append(loop)
 
-    return initial_loops
+#    return initial_loops
+
+def draw_loop_extrusion_starting_point(chromosome_length):
+
+    # draw a starting point for extrusion along the chromosome
+    random_particle =  randint(1, chromosome_length-1)
+
+    return [random_particle,random_particle+1]
+
+
 
 ##########
 
@@ -3704,3 +3826,25 @@ def compute_the_objective_function(input_file_name,
 
     infile.close()
     outfile.close()
+
+
+### get unique list ###
+    
+def get_list(input_list):
+
+    output_list = []
+
+    for element in input_list:
+        #print(type(element))
+        if isinstance(element, (int)):
+            output_list.append(element)
+        if isinstance(element, (list)):
+            for subelement in element:
+                output_list.append(subelement)
+        if isinstance(element, (tuple)):
+            for subelement in range(element[0],element[1]+1,element[2]):
+                output_list.append(subelement)
+    return output_list
+
+##########
+#MPI.Finalize()
