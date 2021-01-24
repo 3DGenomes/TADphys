@@ -66,7 +66,9 @@ persistence_length = 0.00
 # set timestep of integrator #
 ##############################
 #timestep = 0.01
-timestep = 0.001
+#timestep = 0.012
+timestep = 0.006
+#timestep = 0.001
 
 
 # HiC Config

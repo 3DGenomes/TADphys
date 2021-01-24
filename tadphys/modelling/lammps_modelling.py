@@ -10,7 +10,7 @@ from pickle import load, dump
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 from math import atan2
-from itertools import combinations, product
+from itertools import combinations, product, chain
 from shutil import copyfile
 
 import sys
@@ -20,6 +20,7 @@ import shutil
 import multiprocessing
 
 from numpy import sin, cos, arccos, sqrt, fabs, pi
+from scipy import spatial
 import numpy as np
 from mpi4py import MPI
 from lammps import lammps
@@ -998,7 +999,8 @@ def run_lammps(kseed, lammps_folder, run_time,
     if initial_relaxation:
         if to_dump:
             lmp.command("undump 1")
-            lmp.command("dump    1       all    custom    %i   %sinitial_relaxation_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
+            lmp.command("dump    1       all    custom    %i   %sinitial_relaxation.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
+            lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id append yes")
         lmp.command("reset_timestep 0")
         lmp.command("run %i" % initial_relaxation)
         lmp.command("write_data relaxed_conformation.txt nocoeff")
@@ -1392,14 +1394,25 @@ def run_lammps(kseed, lammps_folder, run_time,
         if to_dump:
             lmp.command("undump 1")
             lmp.command("dump    1       all    custom    %i   %sloop_extrusion_MD_*.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
-
+            lmp.command("dump_modify 1 format line \"%d %.5f %.5f %.5f\" sort id append no")
+            
         # Randomly extract starting point of the extrusion dynamics between start and stop
         extruders_positions = []
         nextruders = int(chromosome_particle_numbers[0]/loop_extrusion_dynamics['separation'])
         print(nextruders)
         for extruder in range(nextruders):
-            extruders_positions.append(draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0]))
+            try:
+                occupied_positions = list(chain(*tmp_extruders_positions))
+            except:
+                occupied_positions = []
+            new_positions = draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0])
+            while (new_positions[0] in occupied_positions) or (new_positions[1] in occupied_positions) or (new_positions[0] in loop_extrusion_dynamics['barriers']) or (new_positions[1] in loop_extrusion_dynamics['barriers']):
+                new_positions = draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0])
+            extruders_positions.append(new_positions)
+            tmp_extruders_positions = [extruders_positions[x] for x in range(len(extruders_positions))]
+        print("Initial extruders' positions",extruders_positions)
 
+            
         # Initialise the lifetime of each extruder
         extruders_lifetimes = []
         for extruder in range(nextruders):
@@ -1440,7 +1453,7 @@ def run_lammps(kseed, lammps_folder, run_time,
                 lmp.command("variable xLE%i equal v_x%i-v_x%i" % (loop_number, particle1, particle2))
                 lmp.command("variable yLE%i equal v_y%i-v_y%i" % (loop_number, particle1, particle2))
                 lmp.command("variable zLE%i equal v_z%i-v_z%i" % (loop_number, particle1, particle2))
-                lmp.command("variable dist_%i_%i equal sqrt(v_xLE%i*v_xLE%i+v_zLE%i*v_zLE%i+v_zLE%i*v_zLE%i)" % (particle1,
+                lmp.command("variable dist_%i_%i equal sqrt(v_xLE%i*v_xLE%i+v_yLE%i*v_yLE%i+v_zLE%i*v_zLE%i)" % (particle1,
                                                                                                                  particle2,
                                                                                                                  loop_number,
                                                                                                                  loop_number,
@@ -1453,7 +1466,8 @@ def run_lammps(kseed, lammps_folder, run_time,
 
             lmp.command("%s" % thermo_style)
             # Doing the LES
-            lmp.command("run %i" % loop_extrusion_dynamics['extrusion_time'])
+            #lmp.command("run %i" % loop_extrusion_dynamics['extrusion_time'])
+            lmp.command("run 0")
             
             # update the lifetime of each extruder
             for extruder in range(nextruders):
@@ -1482,11 +1496,26 @@ def run_lammps(kseed, lammps_folder, run_time,
                     random_number = uniform(0, 1)
                     if random_number <= loop_extrusion_dynamics['right_extrusion_rate']:
                         extruders_positions[extruder][1] += 1
-                # If the extruder reached its lifetime, put it in another position
+
+                # If the extruder bumps into another extruder bring it back               
+                tmp_extruders_positions = [extruders_positions[x] for x in range(len(extruders_positions)) if x != extruder]
+                occupied_positions = list(chain(*tmp_extruders_positions))
+                print("Extruder positions",extruders_positions[extruder])
+                print("Occupied_positions",sorted(occupied_positions))
+                if extruders_positions[extruder][0] in occupied_positions:
+                    extruders_positions[extruder][0] += 1
+                if extruders_positions[extruder][1] in occupied_positions:
+                    extruders_positions[extruder][1] -= 1
+
+                # If the extruder reached its lifetime, put it in another position                
                 if extruders_lifetimes[extruder] == loop_extrusion_dynamics['lifetime']:
                     extruders_positions[extruder] = draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0])
+                    while (extruders_positions[extruder][0] in occupied_positions) or (extruders_positions[extruder][1] in occupied_positions) or (extruders_positions[extruder][0] in loop_extrusion_dynamics['barriers']) or (extruders_positions[extruder][1] in loop_extrusion_dynamics['barriers']):
+                        extruders_positions[extruder] = draw_loop_extrusion_starting_point(loop_extrusion_dynamics['chrlength'][0])
                     # Re-initialise the lifetime of the extruder
                     extruders_lifetimes[extruder] = 0
+                    print("Extruders' repositioning after lifetime",extruders_positions,extruders_positions[extruder])
+                    
                 # Check presence of barriers
                 if loop_extrusion_dynamics['barriers_permeability'] < 1.0:                    
                     # If a motor tries to overcome a barrier we stop it with a probability > than the permeability
@@ -1501,7 +1530,8 @@ def run_lammps(kseed, lammps_folder, run_time,
                         if random_number >= loop_extrusion_dynamics['barriers_permeability']:
                             extruders_positions[extruder][1] -= 1
                         
-            print(extruders_positions,extruders_lifetimes)
+            print("Extruders positions at step",LES,extruders_positions)
+            print("Extruders lifetimes at step",LES,extruders_lifetimes)
 
     ### Put here the creationg of a pickle with the complete trajectory ###
     if to_dump:
@@ -2368,7 +2398,8 @@ def generate_chromosome_rosettes_conformation ( chromosome_particle_numbers ,
                                                 rosette_radius=12.0 , particle_radius=0.5 ,
                                                 seed_of_the_random_number_generator=1 ,
                                                 number_of_conformations=1,
-                                                outfile = "Initial_rosette_conformation.dat"):
+                                                outfile = "Initial_rosette_conformation.dat",
+                                                atom_types=1):
     """
     Generates lammps initial conformation file by rosettes conformation
     
@@ -2436,7 +2467,7 @@ def generate_chromosome_rosettes_conformation ( chromosome_particle_numbers ,
             for rosette_pair in list(combinations(final_rosettes,2)):
                 molecule0 = list(zip(rosette_pair[0]['x'],rosette_pair[0]['y'],rosette_pair[0]['z']))
                 molecule1 = list(zip(rosette_pair[1]['x'],rosette_pair[1]['y'],rosette_pair[1]['z']))
-                distances = scipy.spatial.distance.cdist(molecule1,molecule0)
+                distances = spatial.distance.cdist(molecule1,molecule0)
                 print(len(molecule0),len(molecule0[0]),distances.min())
                 if distances.min() < particle_radius*2.0*0.95:
                     particles_overlap = 0
@@ -2447,7 +2478,7 @@ def generate_chromosome_rosettes_conformation ( chromosome_particle_numbers ,
                     molecule0 = list(zip(final_rosettes[r]['x'],final_rosettes[r]['y'],final_rosettes[r]['z']))
                     print(len(molecule0),len(molecule0[0]))
 
-                    distances = scipy.spatial.distance.cdist(molecule0,molecule0)
+                    distances = spatial.distance.cdist(molecule0,molecule0)
                     print(distances.min())
                     for i in xrange(len(molecule0)):
                         for j in xrange(i+1,len(molecule0)):
@@ -2465,7 +2496,8 @@ def generate_chromosome_rosettes_conformation ( chromosome_particle_numbers ,
         write_initial_conformation_file(final_rosettes,
                                         chromosome_particle_numbers,
                                         confining_environment,
-                                        out_file=outfile)
+                                        out_file=outfile,
+                                        atom_types=atom_types)
 
 ##########
         
@@ -2475,7 +2507,8 @@ def generate_chromosome_rosettes_conformation_with_pbc ( chromosome_particle_num
                                                          rosette_radius=12.0 , particle_radius=0.5 ,
                                                          seed_of_the_random_number_generator=1 ,
                                                          number_of_conformations=1,
-                                                         outfile = "Initial_rosette_conformation_with_pbc.dat"):
+                                                         outfile = "Initial_rosette_conformation_with_pbc.dat",
+                                                         atom_types=1):
     """
     Generates lammps initial conformation file by rosettes conformation
     
@@ -2582,7 +2615,8 @@ def generate_chromosome_rosettes_conformation_with_pbc ( chromosome_particle_num
         write_initial_conformation_file(final_rosettes,
                                         chromosome_particle_numbers,
                                         confining_environment,
-                                        out_file=outfile)
+                                        out_file=outfile,
+                                        atom_types=atom_types)
 
 ##########
 
@@ -3303,7 +3337,10 @@ def norm(a):
 def write_initial_conformation_file(chromosomes,
                                     chromosome_particle_numbers,
                                     confining_environment,
-                                    out_file="Initial_conformation.dat"):
+                                    out_file="Initial_conformation.dat",
+                                    atom_types=1,
+                                    angle_types=1,
+                                    bond_types=1):
     # Choosing the appropriate xlo, xhi...etc...depending on the confining environment
     xlim = []
     ylim = []
@@ -3329,7 +3366,7 @@ def write_initial_conformation_file(chromosomes,
         zlim.append(c)
 
     if confining_environment[0] == 'cube':
-        hside = confining_environment[1] * 0.5 + 1.0
+        hside = confining_environment[1] * 0.5
         xlim.append(-hside)
         xlim.append(hside)
         ylim.append(-hside)
@@ -3348,9 +3385,6 @@ def write_initial_conformation_file(chromosomes,
         zlim.append(hheight)
     
     fileout = open(out_file,'w')
-    angle_types = 1
-    bond_types  = 1
-    atom_types  = 1
     n_chr=len(chromosomes)
     n_atoms=0
     for n in chromosome_particle_numbers:
