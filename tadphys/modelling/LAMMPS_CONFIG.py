@@ -26,8 +26,9 @@ boundary = "p p p"
 mass = "* 1.0"
 
 # neighbor http://lammps.sandia.gov/doc/neighbor.html
-neighbor = "3.0 nsq" # Optional for small and low density systems
-#neighbor = "0.3 bin" # Standard choice for large (> 10,000 particles) systems
+#neighbor = "3.0 nsq" # Optional for small and low density systems
+neighbor = "0.3 bin" # Standard choice for large (> 10,000 particles) systems
+#neigh_modify = "every 1 delay 1 check yes page 200000 one 20000"
 neigh_modify = "every 1 delay 1 check yes"
 
 # thermo

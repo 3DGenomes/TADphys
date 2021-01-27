@@ -997,13 +997,54 @@ def run_lammps(kseed, lammps_folder, run_time,
         print("")
 
     if initial_relaxation:
+        
         if to_dump:
             lmp.command("undump 1")
             lmp.command("dump    1       all    custom    %i   %sinitial_relaxation.XYZ  id  xu yu zu" % (to_dump,lammps_folder))
             lmp.command("dump_modify     1 format line \"%d %.5f %.5f %.5f\" sort id append yes")
+        if "MSD" in initial_relaxation:
+            lmp.command("compute MSD all msd")
+            lmp.command("variable MSD equal c_MSD[4]")
+            lmp.command("variable dx  equal c_MSD[1]")
+            lmp.command("variable dy  equal c_MSD[2]")
+            lmp.command("variable dz  equal c_MSD[3]")
+            lmp.command("variable step  equal step")
+            lmp.command("fix MSD all print %i \"${step} ${dx} ${dy} ${dz} ${MSD}\" file MSD.txt" % (initial_relaxation["MSD"]))
+
+        if "Distances" in initial_relaxation:
+            #lmp.command("compute xu all property/atom xu")
+            #lmp.command("compute yu all property/atom yu")
+            #lmp.command("compute zu all property/atom zu")
+            #pair_number = 0
+            #for particle1 in range(1,chrlength[0]):
+            #    for particle2 in range(particle1,chrlength[0]):
+            #        pair_number += 1
+            #        lmp.command("variable x%i equal c_xu[%i]" % (particle1, particle1))
+            #        lmp.command("variable x%i equal c_xu[%i]" % (particle2, particle2))
+            #        lmp.command("variable y%i equal c_yu[%i]" % (particle1, particle1))
+            #        lmp.command("variable y%i equal c_yu[%i]" % (particle2, particle2))
+            #        lmp.command("variable z%i equal c_zu[%i]" % (particle1, particle1))
+            #        lmp.command("variable z%i equal c_zu[%i]" % (particle2, particle2))
+                    
+            #        lmp.command("variable xLE%i equal v_x%i-v_x%i" % (pair_number, particle1, particle2))
+            #        lmp.command("variable yLE%i equal v_y%i-v_y%i" % (pair_number, particle1, particle2))
+            #        lmp.command("variable zLE%i equal v_z%i-v_z%i" % (pair_number, particle1, particle2))
+            #        lmp.command("variable dist_%i_%i equal sqrt(v_xLE%i*v_xLE%i+v_yLE%i*v_yLE%i+v_zLE%i*v_zLE%i)" % (particle1, particle2, pair_number, pair_number, pair_number, pair_number, pair_number, pair_number))
+
+            lmp.command("compute pairs     all property/local patom1 patom2")
+            lmp.command("compute distances all pair/local dist")
+            #lmp.command("variable distances equal c_distances[1]")
+            lmp.command("dump distances all local %i distances.txt c_pairs[1] c_pairs[2] c_distances" % (initial_relaxation["Distances"]))
+            #lmp.command("fix distances all print %i \"${step} ${distances}\" file distances.txt" % (initial_relaxation["Distances"]))
+            
         lmp.command("reset_timestep 0")
-        lmp.command("run %i" % initial_relaxation)
+        lmp.command("run %i" % initial_relaxation["relaxation_time"])
         lmp.command("write_data relaxed_conformation.txt nocoeff")
+        if "MSD" in initial_relaxation:
+            lmp.command("uncompute MSD")
+        if "distances" in initial_relaxation:
+            lmp.command("uncompute distances")
+            lmp.command("undum     distances")
         
     timepoints = 1
     xc = []
@@ -1466,8 +1507,8 @@ def run_lammps(kseed, lammps_folder, run_time,
 
             lmp.command("%s" % thermo_style)
             # Doing the LES
-            #lmp.command("run %i" % loop_extrusion_dynamics['extrusion_time'])
-            lmp.command("run 0")
+            lmp.command("run %i" % loop_extrusion_dynamics['extrusion_time'])
+            #lmp.command("run 0")
             
             # update the lifetime of each extruder
             for extruder in range(nextruders):
@@ -1483,8 +1524,8 @@ def run_lammps(kseed, lammps_folder, run_time,
                 loop_number += 1
 
             # Update the particles involved in the loop extrusion interaction:
-            # decrease the intial_start by one until you get to start
-            # increase the intial_stop by one until you get to stop
+            # decrease the initial_start by one until you get to start
+            # increase the initial_stop by one until you get to stop
             for extruder in range(len(extruders_positions)):
                 # If the left part reaches the start of the chromosome -> Stop extruding
                 if extruders_positions[extruder][0] > 1:
