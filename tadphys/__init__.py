@@ -3,7 +3,7 @@ standard_library.install_aliases()
 from os import environ
 from subprocess import Popen, PIPE, check_call, CalledProcessError
 
-from taddyn._version import __version__
+from tadphys._version import __version__
 
 # ## Check if we have X display http://stackoverflow.com/questions/8257385/automatic-detection-of-display-availability-with-matplotlib
 # if not "DISPLAY" in environ:
@@ -19,11 +19,11 @@ from taddyn._version import __version__
 
 def get_dependencies_version(dico=False):
     """
-    Check versions of TADdyn and all dependencies, as well and retrieves system
+    Check versions of TADphys and all dependencies, as well and retrieves system
     info. May be used to ensure reproducibility.
     :returns: string with description of versions installed
     """
-    versions = {'  TADdyn': __version__ + '\n\n'}
+    versions = {'  TADphys': __version__ + '\n\n'}
     
     try:
         import scipy
@@ -62,11 +62,11 @@ def get_dependencies_version(dico=False):
                           sorted(versions.keys())])
 
 
-from taddyn.chromosome                 import Chromosome
-from taddyn.experiment                 import Experiment, load_experiment_from_reads
-from taddyn.chromosome                 import load_chromosome
+from tadphys.chromosome                 import Chromosome
+from tadphys.experiment                 import Experiment, load_experiment_from_reads
+from tadphys.chromosome                 import load_chromosome
 # from taddyn.modelling.structuralmodels import StructuralModels
 # from taddyn.modelling.structuralmodels import load_structuralmodels
 # from taddyn.utils.hic_parser         import load_hic_data_from_reads
 # from taddyn.utils.hic_parser         import load_hic_data_from_bam
-from taddyn.utils.hic_parser         import read_matrix
+from tadphys.utils.hic_parser         import read_matrix

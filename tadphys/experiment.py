@@ -4,26 +4,22 @@
 
 """
 
-from copy                                import deepcopy as copy
-from sys                                 import stderr
-from warnings                            import warn
-from math                                import isnan
-from numpy                               import log2, array
-#from taddyn                            import HiC_data
-from taddyn.modelling.HIC_CONFIG         import CONFIG
-from taddyn.utils.hic_parser         import read_matrix
-from taddyn.utils.extraviews           import nicer
-from taddyn.utils.tadmaths             import zscore, nozero_log_matrix
-from taddyn.utils.hic_filtering        import hic_filtering_for_modelling
-# from taddyn.modelling.structuralmodels import StructuralModels
+from copy                         import deepcopy as copy
+from sys                          import stderr
+from warnings                     import warn
+from math                         import isnan
+from numpy                        import log2, array
+from tadphys.modelling.HIC_CONFIG import CONFIG
+from tadphys.utils.hic_parser     import read_matrix
+from tadphys.utils.extraviews     import nicer
+from tadphys.utils.tadmaths       import zscore, nozero_log_matrix
+from tadphys.utils.hic_filtering  import hic_filtering_for_modelling
 from collections import OrderedDict
 
 try:
-    from taddyn.modelling.impoptimizer  import IMPoptimizer
-    # from taddyn.modelling.imp_modelling import generate_3d_models
-    from taddyn.modelling.lammps_modelling import generate_lammps_models
+    from tadphys.modelling.lammps_modelling import generate_lammps_models
 except ImportError:
-    stderr.write('IMP not found, check PYTHONPATH\n')
+    pass
 
 try:
     import matplotlib.pyplot as plt
@@ -420,7 +416,7 @@ class Experiment(object):
         Set a new value for the resolution. Copy the original data into
         Experiment._ori_hic and replace the Experiment.hic_data
         with the data corresponding to new data
-        (:func:`taddyn.Chromosome.compare_condition`).
+        (:func:`tadphys.Chromosome.compare_condition`).
 
         :param resolution: an integer representing the resolution. This number
            must be a multiple of the original resolution, and higher than it
@@ -581,7 +577,7 @@ class Experiment(object):
         :param None resolution: resolution of the experiment in the file; it
            will be adjusted to the resolution of the experiment. By default the
            file is expected to contain a Hi-C experiment with the same resolution
-           as the :class:`taddyn.Experiment` created, and no change is made
+           as the :class:`tadphys.Experiment` created, and no change is made
         :param True filter_columns: filter the columns with unexpectedly high
            content of low values
         :param False silent: does not warn for removed columns
@@ -627,7 +623,7 @@ class Experiment(object):
         :param None resolution: resolution of the experiment in the file; it
            will be adjusted to the resolution of the experiment. By default the
            file is expected to contain a Hi-C experiment with the same resolution
-           as the :class:`taddyn.Experiment` created, and no change is made
+           as the :class:`tadphys.Experiment` created, and no change is made
         :param True filter_columns: filter the columns with unexpectedly high
            content of low values
         :param False silent: does not warn for removed columns
@@ -731,7 +727,7 @@ class Experiment(object):
     #                   rowsums=None, index=0):
     #     """
     #     Normalize the Hi-C data. This normalization step does the same of
-    #     the :func:`taddyn.tadbit.tadbit` function (default parameters),
+    #     the :func:`tadphys.tadbit.tadbit` function (default parameters),
 
     #     It fills the Experiment.norm variable with the Hi-C values divided by
     #     the calculated weight.
@@ -895,7 +891,7 @@ class Experiment(object):
 
            ::
 
-             from taddyn.imp.CONFIG import CONFIG
+             from tadphys.imp.CONFIG import CONFIG
 
            where CONFIG is a dictionarry of dictionnaries to be passed to this
            function:
@@ -948,7 +944,7 @@ class Experiment(object):
                 restart_file != False
         :param False useColvars: True if you want the restrains to be loaded by colvars
 
-        :returns: a :class:`taddyn.imp.structuralmodels.StructuralModels` object.
+        :returns: a :class:`tadphys.imp.structuralmodels.StructuralModels` object.
 
         """
         if isinstance(stages, list) and tool == 'imp':
@@ -1079,7 +1075,7 @@ class Experiment(object):
                0.002, 0.003, 0.004 and 0.005
 
 
-        :returns: an :class:`taddyn.imp.impoptimizer.IMPoptimizer` object
+        :returns: an :class:`tadphys.imp.impoptimizer.IMPoptimizer` object
 
         """
         if not self._normalization:
@@ -1127,7 +1123,7 @@ class Experiment(object):
             stderr.write('WARNING: normalizing according to visibility method\n')
             for i in idx:
                 self.normalize_hic(index=i)
-        from taddyn import Chromosome
+        from tadphys import Chromosome
         if start < 1:
             raise ValueError('ERROR: start should be higher than 0\n')
         start -= 1 # things starts at 0 for python. we keep the end coordinate
@@ -1368,7 +1364,7 @@ class Experiment(object):
                                         for i in xrange(siz)])
                              for j in xrange(siz)])
         if print_it:
-            print out
+            print(out)
         else:
             return out + '\n'
 
@@ -1402,7 +1398,7 @@ class Experiment(object):
     #     :param True normalized: show the normalized data (weights might have
     #        been calculated previously). *Note: white rows/columns may appear in
     #        the matrix displayed; these rows correspond to filtered rows (see*
-    #        :func:`taddyn.utils.hic_filtering.hic_filtering_for_modelling` *)*
+    #        :func:`tadphys.utils.hic_filtering.hic_filtering_for_modelling` *)*
     #     :param True relative: color scale is relative to the whole matrix of
     #        data, not only to the region displayed
     #     :param True decorate: draws color bar, title and axes labels

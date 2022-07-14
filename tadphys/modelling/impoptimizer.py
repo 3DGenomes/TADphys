@@ -322,7 +322,7 @@ class IMPoptimizer(object):
                     if verbose == 2:
                         stderr.write(verb + str(round(result, 4)) + '\n')
                     else:
-                        print verb + str(round(result, 4))
+                        print(verb + str(round(result, 4)))
                 continue
 
             config_tmp = {'kforce'   : float(kforce),
@@ -372,11 +372,12 @@ class IMPoptimizer(object):
 
                  # Update nmodels with the ones that really finished
                 if self.n_models != len(tdm):
-                    print 'WARNING: not all models produced: step %s, nmodels=%s' %(i+1, len(tdm))
+                    print('WARNING: not all models produced: step %s, nmodels=%s' %(i+1, len(tdm)))
                     self.n_models = len(tdm)
 
-            except Exception, e:
-                print '  SKIPPING: %s' % e
+            except ValueError:
+                _, e, _ = sys.exc_info()
+                print('  SKIPPING: %s' % e)
                 result = 0
                 cutoff = my_round(dcutoff_arange[0])
             for ct,m in enumerate(avg_result):
@@ -391,7 +392,7 @@ class IMPoptimizer(object):
                     if verbose == 2:
                         stderr.write(verb + str(round(result, 4)) + '\n')
                     else:
-                        print verb + str(round(result, 4))
+                        print(verb + str(round(result, 4)))
                 
                 count += ct
                 # Store the correlation for the TADdyn parameters set
@@ -546,7 +547,7 @@ class IMPoptimizer(object):
                     best = ((scale, maxdist, upfreq, lowfreq, kbending, cutoff), val)
 
         if with_corr:
-            print best
+            #print best
             return (dict((('scale'    , float(best[0][0])),
                           ('kbending' , float(best[0][1])),
                           ('maxdist'  , float(best[0][2])),
@@ -746,7 +747,7 @@ class IMPoptimizer(object):
                     key=lambda x: self.results[
                         (scale, kbending, maxdist, lowfreq, upfreq, x)])
             except IndexError:
-                print 'Missing dcutoff', (scale, kbending, maxdist, lowfreq, upfreq)
+                print('Missing dcutoff', (scale, kbending, maxdist, lowfreq, upfreq))
                 continue
 
             for c in cut:
@@ -755,7 +756,7 @@ class IMPoptimizer(object):
                     out.write('  %-5s\t%-8s\t%-8s\t%-8s\t%-7s\t%-7s\t%-11s\n' % (
                         scale, kbending, maxdist, lowfreq, upfreq, c, result))
                 except KeyError:
-                    print 'KeyError', (scale, kbending, maxdist, lowfreq, upfreq, c, result)
+                    print('KeyError', (scale, kbending, maxdist, lowfreq, upfreq, c, result))
                     continue
         out.close()
 

@@ -93,7 +93,6 @@ def plot_2d_optimization_result(result,
     # Commands for compatibility with the OLD version:
     #print axes_range
     if len(axes_range) == 4:
-        print "I'm here!!!"
         tmp_axes_range = axes_range
         tmp_axes_range[1]  = [0.0]         # kbending !!!New option!!!
         len_kbending_range = 1
@@ -268,7 +267,7 @@ def plot_2d_optimization_result(result,
         rect = patches.Rectangle((len(xax)-.5, -0.5), 2.5, len(yax),
                                  facecolor='grey', alpha=0.5)
         # Define the rectangles for
-        print dcutoff
+        #print dcutoff
         rect.set_clip_on(False)
         grid[cell-1].add_patch(rect)
         grid[cell-1].text(len(xax) + 1.0, len(yax) / 2.,

@@ -19,19 +19,20 @@ units = "lj"
 atom_style = "angle"
 
 # boundary conditions http://lammps.sandia.gov/doc/boundary.html
-#boundary = "p p p"
-boundary = "f f f"
+boundary = "p p p"
+#boundary = "f f f"
 
 # mass http://lammps.sandia.gov/doc/mass.html
 mass = "* 1.0"
 
 # neighbor http://lammps.sandia.gov/doc/neighbor.html
-neighbor = "3.0 nsq" # Optional for small and low density systems
-#neighbor = "0.3 bin" # Standard choice for large (> 10,000 particles) systems
+#neighbor = "3.0 nsq" # Optional for small and low density systems
+neighbor = "0.3 bin" # Standard choice for large (> 10,000 particles) systems
+#neigh_modify = "every 1 delay 1 check yes page 200000 one 20000"
 neigh_modify = "every 1 delay 1 check yes"
 
 # thermo
-run = 10000
+run = 100
 thermo = 1000 #int(float(run)/100)
 #thermo_style    custom   step temp epair emol press pxx pyy pzz pxy pxz pyz vol
 
@@ -66,7 +67,9 @@ persistence_length = 0.00
 # set timestep of integrator #
 ##############################
 #timestep = 0.01
-timestep = 0.001
+#timestep = 0.012
+timestep = 0.006
+#timestep = 0.001
 
 
 # HiC Config
